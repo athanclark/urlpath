@@ -4,15 +4,11 @@ cabal-dev
 *.hi
 *.chi
 *.chs.h
-<<<<<<< HEAD
-.virthualenv
-.hsenv
-.cabal-sandbox/
-cabal.sandbox.config
-=======
 .virtualenv
 .hsenv
 .cabal-sandbox/
 cabal.sandbox.config
 cabal.config
->>>>>>> 4804f17ad14c60cde90a71fb6882a887cfcba63d
+*.swp
+*.swo
+*.swn
