@@ -5,7 +5,6 @@ Maintainer:             Athan Clark <athan.clark@gmail.com>
 License:                MIT
 License-File:           LICENSE
 Category:               Web
-Tags:                   web, url
 Synopsis:               Painfully simple URL writing combinators
 Description:
   Simple URL DSL for Haskell.
