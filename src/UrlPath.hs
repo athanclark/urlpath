@@ -7,7 +7,7 @@
 {-# LANGUAGE TypeFamilies #-}
 
 
-module Lucid.Path where
+module UrlPath where
 
 import qualified Data.Text as T
 

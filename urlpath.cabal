@@ -61,10 +61,11 @@ Library
   Default-Language:     Haskell2010
   HS-Source-Dirs:       src
   GHC-Options:          -Wall
-  Exposed-Modules:      Path
+  Exposed-Modules:      UrlPath
   Build-Depends:        base >= 4 && < 5
                       , mtl
                       , text
+                      , transformers
 
 Source-Repository head
   Type:                 git
