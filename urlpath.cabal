@@ -4,6 +4,7 @@ Author:                 Athan Clark <athan.clark@gmail.com>
 Maintainer:             Athan Clark <athan.clark@gmail.com>
 License:                BSD3
 License-File:           LICENSE
+Category:               Web
 Synopsis:               Painfully simple URL writing combinators
 Description:
   Simple URL DSL for Haskell.
