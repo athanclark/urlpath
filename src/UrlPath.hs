@@ -73,6 +73,23 @@ instance Monad m => Url UrlString (GroundedUrlT m) where
 instance Monad m => Url UrlString (AbsoluteUrlT m) where
   renderUrl = expandAbsolute
 
+instance Url T.Text RelativeUrl where
+  renderUrl x = RelativeUrl $ \_ -> expandRelative $ UrlString x []
+
+instance Url T.Text GroundedUrl where
+  renderUrl x = GroundedUrl $ \_ -> expandGrounded $ UrlString x []
+
+instance Url T.Text AbsoluteUrl where
+  renderUrl x = expandAbsolute $ UrlString x []
+
+instance Monad m => Url T.Text (RelativeUrlT m) where
+  renderUrl x = RelativeUrlT $ \_ -> return $ expandRelative $ UrlString x []
+
+instance Monad m => Url T.Text (GroundedUrlT m) where
+  renderUrl x = GroundedUrlT $ \_ -> return $ expandGrounded $ UrlString x []
+
+instance Monad m => Url T.Text (AbsoluteUrlT m) where
+  renderUrl x = expandAbsolute $ UrlString x []
 
 -- * Example
 --
