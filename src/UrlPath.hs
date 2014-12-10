@@ -55,6 +55,9 @@ class Monad m => Url a m where
 instance Url T.Text Identity where
   renderUrl = Identity
 
+instance Url UrlString Identity where
+  renderUrl = Identity . expandRelative
+
 instance Url UrlString RelativeUrl where
   renderUrl x = RelativeUrl $ \_ -> expandRelative x
 
