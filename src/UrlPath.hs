@@ -48,7 +48,7 @@ instance UrlReader GroundedUrl where
   runUrlReader = runGroundedUrl
 
 -- | @Url@ takes an input type @a@, and returns a modality @f@ around @T.Text@.
-class Monad m => Url a m where
+class MonadReader T.Text m => Url a m where
   renderUrl :: a -- ^ Url-like type (@UrlString@ or @T.Text@).
             -> m T.Text -- ^ Rendered Url in some context @f@
 
