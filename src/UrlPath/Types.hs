@@ -26,7 +26,7 @@ renderGETParam (GETParam k v) =
 
 -- | A Url string - a target page and GET parameters.
 data UrlString = UrlString { target :: !T.Text -- ^ Relative base file - eg) @"foo.php"@ in @"foo.php?bar=baz"@.
-                           , params :: [GETParam] -- ^ GET Parameters.
+                           , getParams :: [GETParam] -- ^ GET Parameters.
                            }
   deriving (Show, Eq)
 
@@ -53,7 +53,7 @@ infixl 9 <?>
 (<&>) :: UrlString -- ^ Old Url
       -> (T.Text, T.Text) -- ^ Additional GET Parameter
       -> UrlString
-old <&> (k,v) = UrlString (target old) $ params old ++ [GETParam k v]
+old <&> (k,v) = UrlString (target old) $ getParams old ++ [GETParam k v]
 
 infixl 8 <&>
 
