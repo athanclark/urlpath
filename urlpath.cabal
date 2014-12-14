@@ -69,6 +69,21 @@ Library
                       , text
                       , transformers
 
+Test-Suite spec
+  Type:                 exitcode-stdio-1.0
+  Default-Language:     Haskell2010
+  Hs-Source-Dirs:       src
+                      , test
+  Ghc-Options:          -Wall
+  Main-Is:              Spec.hs
+  Build-Depends:        base
+                      , hspec
+                      , QuickCheck
+                      , quickcheck-instances
+                      , mtl
+                      , text
+                      , transformers
+
 Source-Repository head
   Type:                 git
   Location:             https://github.com/athanclark/urlpath.git
