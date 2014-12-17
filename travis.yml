@@ -1,0 +1,2 @@
+before_script: cabal configure --enable-tests
+script: cabal test
