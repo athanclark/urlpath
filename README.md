@@ -1,16 +1,16 @@
 # urlpath
 
+[![Build Status](https://travis-ci.org/athanclark/urlpath.svg)](https://travis-ci.org/athanclark/urlpath)
+[![Coverage Status](https://img.shields.io/coveralls/athanclark/urlpath.svg)](https://coveralls.io/r/athanclark/urlpath)
+
 Dirt-simple, embarrassing, horribly unimaginative URL combinator library for 
 Haskell.
 
+
 ## Installation
 
-Currently, because it's not on Hackage:
-
 ```bash
-git clone https://github.com/athanclark/urlpath.git && cd urlpath
-cabal sandbox init
-cabal install
+cabal install urlpath
 ```
 
 ## Usage
