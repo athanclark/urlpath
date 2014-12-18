@@ -1,2 +1,4 @@
-before_script: cabal configure --enable-tests
-script: cabal test
+install:
+  - cabal install QuickCheck quickcheck-instances hspec
+script:
+  - cabal configure --enable-tests && cabal build && cabal test
