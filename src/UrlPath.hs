@@ -23,88 +23,89 @@ import Control.Monad.Trans
 import Control.Monad.Reader.Class
 
 
--- | We need a @MonadReader@ without the functional dependency. Luckily, our 
--- only use case is an OverloadedString!
-class Monad m => StringReader (m :: * -> *) where
-  askString :: IsString a =>
-               m a
 
--- | Convenience typeclass for a uniform interface into pure @Reader@-like 
--- monads.
-class UrlReader (m :: * -> *) where
-  runUrlReader :: IsString a =>
-                  m b -- ^ Monadic reader-like computation
-               -> a -- ^ @IsString@ index
-               -> b -- ^ Result
+-- | @Url@ is a relationship between an underlying (monomorphic) string type
+-- @string@, and a deployment context @m@. We try to make the deployment and 
+-- implementation type coercible at the top level - coercing your final 
+-- expression to @String@ or @T.Text@ will have /all/ use-cases coerce to that 
+-- type, similarly with the deployment scheme.
+--
+-- We chose to not force @MonadReader@ as a superclass for @m@ due to the 
+-- monomorphic demand on functional dependencies.
+class ( IsString string, Monoid string, MonadReader string m ) =>
+          Url
+            string -- ^ Implementation string type
+            (m :: * -> *) -- ^ Context for deployment
+            where
+  url :: UrlString string -- ^ Url type
+      -> m string -- ^ Rendered Url in some context.
+  stringUrl :: string -- ^ raw string
+            -> m string -- ^ Rendered string in some context.
 
-instance StringReader Identity where
-  askString = return ""
+-- | Overload deployment schemes with this - then, all that's needed is a type 
+-- coercion to change deployment. This only works with flat (co)monads, so monad 
+-- transformers are out.
+class Url string m => UrlReader string m where
+  runUrlReader :: Url string m =>
+                  m string -- ^ Monad with result @string@
+               -> string -- ^ Reader index
+               -> string -- ^ Final result
 
-instance UrlReader Identity where
-  runUrlReader x _ = runIdentity x
 
-instance IsString a => UrlReader (AbsoluteUrl a) where
-  runUrlReader = runAbsoluteUrl
+-- * Monads
 
-instance IsString a => UrlReader (RelativeUrl a) where
+instance ( Monoid a
+         , IsString a ) => Url a (RelativeUrl a) where
+  url = RelativeUrl . const . expandRelative
+  stringUrl x = RelativeUrl $ const $ expandRelative $ UrlString x []
+
+instance ( Monoid a
+         , IsString a ) => UrlReader a (RelativeUrl a) where
   runUrlReader = runRelativeUrl
 
-instance IsString a => UrlReader (GroundedUrl a) where
+---
+
+instance ( Monoid a
+         , IsString a ) => Url a (GroundedUrl a) where
+  url = GroundedUrl . const . expandGrounded
+  stringUrl x = GroundedUrl $ const $ expandGrounded $ UrlString x []
+
+instance ( Monoid a
+         , IsString a ) => UrlReader a (GroundedUrl a) where
   runUrlReader = runGroundedUrl
 
--- | @Url@ takes an input type @a@, and returns a modality @f@ around @T.Text@.
-class Url a m where
-  renderUrl ::
-               a -- ^ Url-like type (@UrlString@ or @T.Text@).
-            -> m b -- ^ Rendered Url in some context @f@
+---
 
-instance IsString a => Url a Identity where
-  renderUrl = Identity
+instance ( Monoid a
+         , IsString a ) => Url a (AbsoluteUrl a) where
+  url = expandAbsolute
+  stringUrl x = expandAbsolute $ UrlString x []
 
-instance IsString a => Url (UrlString a) Identity where
-  renderUrl = Identity . expandRelative
+-- | Hand-off host prepending to the MonadReader instance
+instance ( Monoid a
+         , IsString a ) => UrlReader a (AbsoluteUrl a) where
+  runUrlReader = runAbsoluteUrl
 
-instance IsString a => Url (UrlString a) (RelativeUrl a) where
-  renderUrl x = RelativeUrl $ \_ -> expandRelative x
 
-instance IsString a => Url (UrlString a) (GroundedUrl a) where
-  renderUrl x = GroundedUrl $ \_ -> expandGrounded x
-
-instance IsString a => Url (UrlString a) (AbsoluteUrl a) where
-  renderUrl = expandAbsolute
+-- * Transformers
 
 instance ( Monad m
-         , IsString a ) => Url (UrlString a) (RelativeUrlT a m) where
-  renderUrl x = RelativeUrlT $ \_ -> return $ expandRelative x
-
-instance ( Monad m
-         , IsString a ) => Url (UrlString a) (GroundedUrlT a m) where
-  renderUrl x = GroundedUrlT $ \_ -> return $ expandGrounded x
-
-instance ( Monad m
-         , IsString a ) => Url (UrlString a) (AbsoluteUrlT a m) where
-  renderUrl = expandAbsolute
-
-instance IsString a => Url a (RelativeUrl a) where
-  renderUrl x = RelativeUrl $ \_ -> expandRelative $ UrlString x []
-
-instance IsString a => Url a (GroundedUrl a) where
-  renderUrl x = GroundedUrl $ \_ -> expandGrounded $ UrlString x []
-
-instance IsString a => Url a (AbsoluteUrl a) where
-  renderUrl x = expandAbsolute $ UrlString x []
-
-instance ( Monad m
+         , Monoid a
          , IsString a ) => Url a (RelativeUrlT a m) where
-  renderUrl x = RelativeUrlT $ \_ -> return $ expandRelative $ UrlString x []
+  url = RelativeUrlT . const . return . expandRelative
+  stringUrl x = RelativeUrlT $ const $ return $ expandRelative $ UrlString x []
 
 instance ( Monad m
+         , Monoid a
          , IsString a ) => Url a (GroundedUrlT a m) where
-  renderUrl x = GroundedUrlT $ \_ -> return $ expandGrounded $ UrlString x []
+  url = GroundedUrlT . const . return . expandGrounded
+  stringUrl x = GroundedUrlT $ const $ return $ expandGrounded $ UrlString x []
 
 instance ( Monad m
+         , Monoid a
          , IsString a ) => Url a (AbsoluteUrlT a m) where
-  renderUrl x = expandAbsolute $ UrlString x []
+  url = expandAbsolute
+  stringUrl x = expandAbsolute $ UrlString x []
 
 -- * Example
 --

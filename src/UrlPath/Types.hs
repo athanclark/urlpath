@@ -19,16 +19,15 @@ import Control.Monad.Reader.Class
 -- constraint of @IsString@ so that construction can be convenient, but 
 -- rendering will require a monomorphic type.
 data UrlString a where
-  UrlString :: IsString a =>  
+  UrlString :: ( IsString a
+               , Monoid a ) =>
                a
             -> [(a, a)]
             -> UrlString a
 
 -- | We choose to not provide a @Show@ instance for @UrlString@ to evade the 
 -- @Monoid@ constraint in the GADT.
-showUrlString :: ( IsString a
-                 , Monoid a ) =>
-                 UrlString a
+showUrlString :: UrlString a
               -> a
 showUrlString !(UrlString !t []) = t
 showUrlString !(UrlString !t ((!k,!v):xs)) =
@@ -74,9 +73,9 @@ expandGrounded !x = "/" <> showUrlString x
 -- | Render the Url String as absolute - getting the root from a @MonadReader@ 
 -- context. The @Monoid@ instance will be decided monomorphically, therefore a 
 -- type signature will be needed when ran.
-expandAbsolute :: ( IsString a
-                  , Monoid a
-                  , MonadReader a m) =>
+expandAbsolute :: ( MonadReader a m
+                  , IsString a
+                  , Monoid a ) =>
                   UrlString a
                -> m a
 expandAbsolute !x = do
@@ -98,9 +97,9 @@ expandAbsolute !x = do
 -- > bar :: LT.Text 
 -- > bar = (runReader (runTextT foo)) $
 -- >   SiteConfig "example.com" "cdn.example.com"
-expandAbsoluteWith :: ( IsString a
-                      , Monoid a
-                      , MonadReader a m) =>
+expandAbsoluteWith :: ( MonadReader a m
+                      , IsString a
+                      , Monoid a ) =>
                       UrlString a
                    -> (a -> a)
                    -> m a
