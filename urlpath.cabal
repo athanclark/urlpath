@@ -42,22 +42,22 @@ Description:
   .
   ... and in Scotty ...
   .
-  > main :: IO ()
-  > main = scottyT 3000
-  >     rootConf
-  >     rootConf
-  >     run
-  > 
-  >   where
-  >     rootConf = flip runAbsoluteT "http://example.com"
-  > 
-  >     run :: ( MonadIO m
-  >            , MonadReader T.Text m
-  >            , Url T.Text m ) =>
-  >            ScottyT LT.Text m ()
-  >     run = get "/" $ do
-  >       path <- lift $ url $ "foo" <?> ("bar","baz")
-  >       text $ LT.fromStrict path
+  >  main :: IO ()
+  >  main = scottyT 3000
+  >      rootConf
+  >      rootConf
+  >      run
+  >  
+  >    where
+  >      rootConf = flip runAbsoluteT "http://example.com"
+  >  
+  >      run :: ( MonadIO m
+  >             , MonadReader T.Text m
+  >             , Url T.Text m ) =>
+  >             ScottyT LT.Text m ()
+  >      run = get "/" $ do
+  >        path <- lift $ url $ "foo" <?> ("bar","baz")
+  >        text $ LT.fromStrict path
   >
   >  λ> curl localhost:3000/
   >  ↪ "http://example.com/foo?bar=baz"
