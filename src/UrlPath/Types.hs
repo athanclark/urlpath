@@ -1,11 +1,14 @@
+{-# LANGUAGE GADTs #-}
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE DeriveFunctor #-}
 
 module UrlPath.Types where
 
-import qualified Data.Text as T
-
+import Data.String
 import Data.Monoid
 import Control.Applicative
 import Control.Monad
@@ -13,68 +16,84 @@ import Control.Monad.Trans
 import Control.Monad.Reader.Class
 
 -- | A GET parameter encoded in a Url.
-data GETParam = GETParam { key :: !T.Text -- ^ Key for a get parameter.
-                         , val :: !T.Text -- ^ Value for the key.
-                         }
-  deriving (Show, Eq)
+data GETParam a where
+  GETParam :: IsString a =>
+              a
+           -> a
+           -> GETParam a
 
 -- | Render a GET parameter pair.
-renderGETParam :: GETParam
-               -> T.Text
-renderGETParam (GETParam k v) =
+renderGETParam :: ( IsString a
+                  , Monoid a ) =>
+                  GETParam a
+               -> a
+renderGETParam !(GETParam !k !v) =
   "&" <> k <> "=" <> v
 
 -- | A Url string - a target page and GET parameters.
-data UrlString = UrlString { target :: !T.Text -- ^ Relative base file - eg) @"foo.php"@ in @"foo.php?bar=baz"@.
-                           , getParams :: [GETParam] -- ^ GET Parameters.
-                           }
-  deriving (Show, Eq)
+data UrlString a where
+  UrlString :: IsString a =>  
+               a
+            -> [GETParam a]
+            -> UrlString a
 
 -- | Render a Url String /simply/ - this is equivalent to @expandRelative@.
-renderUrlString :: UrlString
-                -> T.Text
-renderUrlString (UrlString t []) = t
-renderUrlString (UrlString t [GETParam k v]) =
+renderUrlString :: ( IsString a
+                   , Monoid a ) =>
+                   UrlString a
+                -> a
+renderUrlString !(UrlString !t []) = t
+renderUrlString !(UrlString !t [GETParam !k !v]) =
   t <> "?" <> k <> "=" <> v
-renderUrlString (UrlString t (GETParam k v : ps)) =
+renderUrlString !(UrlString !t (GETParam !k !v : ps)) =
   t <> "?" <> k <> "=" <> v <>
     foldr (\x acc -> acc <> renderGETParam x) "" ps
 
 
 -- | Lifts a target path with some GET parameter chunks into a @UrlString@.
-(<?>) :: T.Text -- ^ Target string
-      -> (T.Text, T.Text) -- ^ GET Parameter
-      -> UrlString
-t <?> (k,v) = UrlString t [GETParam k v]
+(<?>) :: ( IsString a
+         , Monoid a ) =>
+         a -- ^ Target string
+      -> (a, a) -- ^ GET Parameter
+      -> UrlString a
+(<?>) !t (!k,!v) = UrlString t [GETParam k v]
 
 infixl 9 <?>
 
 -- | Adds more GET parameters to a @UrlString@.
-(<&>) :: UrlString -- ^ Old Url
-      -> (T.Text, T.Text) -- ^ Additional GET Parameter
-      -> UrlString
-old <&> (k,v) = UrlString (target old) $ getParams old ++ [GETParam k v]
+(<&>) :: ( IsString a
+         , Monoid a ) =>
+         UrlString a -- ^ Old Url
+      -> (a, a) -- ^ Additional GET Parameter
+      -> UrlString a
+(<&>) !(UrlString !t !p) (!k,!v) = UrlString t $ p ++ [GETParam k v]
 
 infixl 8 <&>
 
 
 -- | Render the Url String as relative
-expandRelative :: UrlString
-               -> T.Text
+expandRelative :: ( IsString a
+                  , Monoid a ) =>
+                  UrlString a
+               -> a
 expandRelative = renderUrlString
 
 -- | Render the Url String as grounded
-expandGrounded :: UrlString
-               -> T.Text
+expandGrounded :: ( IsString a
+                  , Monoid a ) =>
+                  UrlString a
+               -> a
 expandGrounded x = "/" <> renderUrlString x
 
 -- | Render the Url String as absolute - getting the root from a MonadReader.
-expandAbsolute :: (MonadReader T.Text m) =>
-                  UrlString
-               -> m T.Text
+expandAbsolute :: ( IsString a
+                  , Monoid a
+                  , MonadReader a m) =>
+                  UrlString a
+               -> m a
 expandAbsolute x = do
-  root <- ask
-  return $ root <> "/" <> renderUrlString x
+  host <- ask
+  return $ host <> "/" <> renderUrlString x
 
 -- | Render the Url String as absolute, but with your own configuration type.
 --             
@@ -91,10 +110,12 @@ expandAbsolute x = do
 -- > bar :: LT.Text 
 -- > bar = (runReader (runTextT foo)) $
 -- >   SiteConfig "example.com" "cdn.example.com"
-expandAbsoluteWith :: (MonadReader a m) =>
-                      UrlString
-                   -> (a -> T.Text)
-                   -> m T.Text
+expandAbsoluteWith :: ( IsString a
+                      , Monoid a
+                      , MonadReader a m) =>
+                      UrlString a
+                   -> (a -> a)
+                   -> m a
 expandAbsoluteWith x f = do
   root <- liftM f ask
   return $ root <> "/" <> renderUrlString x
@@ -115,25 +136,23 @@ expandAbsoluteWith x f = do
 --
 -- It is generally simpler (but more restrictive) to use the non-transformer 
 -- variety.
-newtype RelativeUrlT m a = RelativeUrlT { runRelativeUrlT :: T.Text -> m a }
+newtype RelativeUrlT h m a = RelativeUrlT { runRelativeUrlT :: h -> m a }
+  deriving Functor
 
-instance Functor f => Functor (RelativeUrlT f) where
-  fmap f x = RelativeUrlT $ \a ->
-    fmap f (runRelativeUrlT x a)
-
-instance Applicative f => Applicative (RelativeUrlT f) where
+instance Applicative f => Applicative (RelativeUrlT h f) where
   (<*>) f x = RelativeUrlT $ \a ->
     (<*>) (runRelativeUrlT f a) (runRelativeUrlT x a)
 
-instance Monad m => Monad (RelativeUrlT m) where
+instance Monad m => Monad (RelativeUrlT h m) where
   return x = RelativeUrlT $ \_ -> return x
   m >>= f = RelativeUrlT $ \a ->
     runRelativeUrlT m a >>= (\x -> runRelativeUrlT (f x) a)
 
-instance MonadTrans RelativeUrlT where
+instance MonadTrans (RelativeUrlT h) where
   lift m = RelativeUrlT (const m)
 
-instance Monad m => MonadReader T.Text (RelativeUrlT m) where
+instance ( Monad m
+         , IsString a ) => MonadReader a (RelativeUrlT a m) where
   ask = return ""
 
 -- | Concrete Monad for automatically coercing HtmlT's to use a mode of Url 
@@ -151,95 +170,95 @@ instance Monad m => MonadReader T.Text (RelativeUrlT m) where
 -- > bar = (runUrlReader (renderTextT foo)) "example.com"
 --
 -- To change the mode of rendering, simple change the coerced type of @foo@.
-newtype RelativeUrl a = RelativeUrl { runRelativeUrl :: T.Text -> a }
+newtype RelativeUrl h a = RelativeUrl { runRelativeUrl :: h -> a }
+  deriving Functor
 
-instance Functor RelativeUrl where
-  fmap f x = RelativeUrl $ \a -> f $ runRelativeUrl x a
-
-instance Applicative RelativeUrl where
+instance Applicative (RelativeUrl h) where
   (<*>) f x = RelativeUrl $ \a ->
     runRelativeUrl f a (runRelativeUrl x a)
 
-instance Monad RelativeUrl where
+instance Monad (RelativeUrl h) where
   return x = RelativeUrl $ const x
   m >>= f = RelativeUrl $ \a ->
     (\y -> runRelativeUrl (f y) a) (runRelativeUrl m a)
 
-instance MonadReader T.Text RelativeUrl where
+instance IsString a => MonadReader a (RelativeUrl a) where
   ask = return ""
 
-newtype GroundedUrlT m a = GroundedUrlT { runGroundedUrlT :: T.Text -> m a }
+newtype GroundedUrlT h m a = GroundedUrlT { runGroundedUrlT :: h -> m a }
 
-instance Functor f => Functor (GroundedUrlT f) where
+instance Functor f => Functor (GroundedUrlT h f) where
   fmap f x = GroundedUrlT $ \a ->
     fmap f (runGroundedUrlT x a)
 
-instance Applicative f => Applicative (GroundedUrlT f) where
+instance Applicative f => Applicative (GroundedUrlT h f) where
   (<*>) f x = GroundedUrlT $ \a ->
     (<*>) (runGroundedUrlT f a) (runGroundedUrlT x a)
 
-instance Monad m => Monad (GroundedUrlT m) where
+instance Monad m => Monad (GroundedUrlT h m) where
   return x = GroundedUrlT $ \_ -> return x
   m >>= f = GroundedUrlT $ \a ->
     runGroundedUrlT m a >>= (\x -> runGroundedUrlT (f x) a)
 
-instance MonadTrans GroundedUrlT where
+instance MonadTrans (GroundedUrlT h) where
   lift m = GroundedUrlT (const m)
 
-instance Monad m => MonadReader T.Text (GroundedUrlT m) where
+instance ( Monad m
+         , IsString a ) => MonadReader a (GroundedUrlT a m) where
   ask = return "/"
 
-newtype GroundedUrl a = GroundedUrl { runGroundedUrl :: T.Text -> a }
+newtype GroundedUrl h a = GroundedUrl { runGroundedUrl :: h -> a }
 
-instance Functor GroundedUrl where
+instance Functor (GroundedUrl h) where
   fmap f x = GroundedUrl $ \a -> f $ runGroundedUrl x a
 
-instance Applicative GroundedUrl where
+instance Applicative (GroundedUrl h) where
   (<*>) f x = GroundedUrl $ \a ->
     runGroundedUrl f a (runGroundedUrl x a)
 
-instance Monad GroundedUrl where
+instance Monad (GroundedUrl h) where
   return x = GroundedUrl $ const x
   m >>= f = GroundedUrl $ \a ->
     (\y -> runGroundedUrl (f y) a) (runGroundedUrl m a)
 
-instance MonadReader T.Text GroundedUrl where
+instance IsString a => MonadReader a (GroundedUrl a) where
   ask = return "/" 
   
-newtype AbsoluteUrlT m a = AbsoluteUrlT { runAbsoluteUrlT :: T.Text -> m a }
+newtype AbsoluteUrlT h m a = AbsoluteUrlT { runAbsoluteUrlT :: h -> m a }
 
-instance Functor f => Functor (AbsoluteUrlT f) where
+instance Functor f => Functor (AbsoluteUrlT h f) where
   fmap f x = AbsoluteUrlT $ \a ->
     fmap f (runAbsoluteUrlT x a)
 
-instance Applicative f => Applicative (AbsoluteUrlT f) where
+instance Applicative f => Applicative (AbsoluteUrlT h f) where
   (<*>) f x = AbsoluteUrlT $ \a ->
     (<*>) (runAbsoluteUrlT f a) (runAbsoluteUrlT x a)
 
-instance Monad m => Monad (AbsoluteUrlT m) where
+instance Monad m => Monad (AbsoluteUrlT h m) where
   return x = AbsoluteUrlT $ const $ return x
   m >>= f = AbsoluteUrlT $ \a ->
     runAbsoluteUrlT m a >>= (\x -> runAbsoluteUrlT (f x) a)
 
-instance MonadTrans AbsoluteUrlT where
+instance MonadTrans (AbsoluteUrlT h) where
   lift m = AbsoluteUrlT (const m)
 
-instance Monad m => MonadReader T.Text (AbsoluteUrlT m) where
+instance ( Monad m
+         , IsString a ) => MonadReader a (AbsoluteUrlT a m) where
   ask = AbsoluteUrlT return
 
-newtype AbsoluteUrl a = AbsoluteUrl { runAbsoluteUrl :: T.Text -> a }
+newtype AbsoluteUrl h a = AbsoluteUrl { runAbsoluteUrl :: h -> a }
 
-instance Functor AbsoluteUrl where
+instance Functor (AbsoluteUrl h) where
   fmap f x = AbsoluteUrl $ \a -> f $ runAbsoluteUrl x a
 
-instance Applicative AbsoluteUrl where
+instance Applicative (AbsoluteUrl h) where
   (<*>) f x = AbsoluteUrl $ \a ->
     runAbsoluteUrl f a (runAbsoluteUrl x a)
 
-instance Monad AbsoluteUrl where
+instance Monad (AbsoluteUrl h) where
   return x = AbsoluteUrl $ const x
   m >>= f = AbsoluteUrl $ \a ->
     (\y -> runAbsoluteUrl (f y) a) (runAbsoluteUrl m a)
 
-instance MonadReader T.Text AbsoluteUrl where
+instance IsString a => MonadReader a (AbsoluteUrl a) where
   ask = AbsoluteUrl id

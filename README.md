@@ -1,5 +1,7 @@
 # urlpath
 
+[![Hackage page (downloads and API reference)][hackage-png]][hackage]
+
 Dirt-simple, embarrassing, horribly unimaginative URL combinator library for 
 Haskell.
 
@@ -78,3 +80,9 @@ HAHAHAAHAHahahahahahaha hahahaha..... haaaaa. Oh man, that was good.
 ## Contributing
 
 `¯\_(ツ)_/¯`
+
+
+
+
+[hackage-png]: http://img.shields.io/badge/urlpath-0.0.6-blue.svg
+[hackage]: http://hackage.haskell.org/package/urlpath
