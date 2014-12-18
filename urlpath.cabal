@@ -23,8 +23,8 @@ Description:
   .
   ... or use the MonadReader instance for a configurable host:
   .
-  >  let url = runAbsoluteUrl $ url $ "foo.php" <?> ("key1","bar") <&> ("key2","baz")
-  >  url "example.com"
+  >  let path = runAbsoluteUrl $ url $ "foo.php" <?> ("key1","bar") <&> ("key2","baz")
+  >  path "example.com"
   >
   >  ↪ "example.com/foo.php?key1=bar&key2=baz"
   .
