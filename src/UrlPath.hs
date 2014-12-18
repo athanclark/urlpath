@@ -33,10 +33,7 @@ import Control.Monad.Reader.Class
 -- We chose to not force @MonadReader@ as a superclass for @m@ due to the 
 -- monomorphic demand on functional dependencies.
 class ( IsString string, Monoid string, MonadReader string m ) =>
-          Url
-            string -- ^ Implementation string type
-            (m :: * -> *) -- ^ Context for deployment
-            where
+          Url string (m :: * -> *) where
   url :: UrlString string -- ^ Url type
       -> m string -- ^ Rendered Url in some context.
   stringUrl :: string -- ^ raw string
@@ -50,7 +47,6 @@ class Url string m => UrlReader string m where
                   m string -- ^ Monad with result @string@
                -> string -- ^ Reader index
                -> string -- ^ Final result
-
 
 -- * Monads
 
@@ -86,7 +82,6 @@ instance ( Monoid a
          , IsString a ) => UrlReader a (AbsoluteUrl a) where
   runUrlReader = runAbsoluteUrl
 
-
 -- * Transformers
 
 instance ( Monad m
@@ -106,28 +101,3 @@ instance ( Monad m
          , IsString a ) => Url a (AbsoluteUrlT a m) where
   url = expandAbsolute
   stringUrl x = expandAbsolute $ UrlString x []
-
--- * Example
---
--- | Here is an example:
---
--- > {-# LANGUAGE OverloadedStrings #-}
--- > {-# LANGUAGE ExtendedDefaultRules #-}
--- >
--- > import Lucid
--- > import Lucid.Path
--- > import qualified Data.Text as T
--- > import qualified Data.Text.Lazy as LT
--- >
--- > foo :: LT.Text
--- > foo = (runUrlReader $ renderTextT bar) "example.com"
--- >
--- > bar :: HtmlT AbsoluteUrl ()
--- > bar = do
--- >   url <- lift $ renderUrl $ "foo.php" <?> ("bar","baz")
--- >   script_ [src_ url] ""
---
--- Where @foo@ is now
---
--- > Lucid> foo
--- > "<script src=\"example.com/foo.php?bar=baz\"></script>"

@@ -26,7 +26,7 @@ data UrlString a where
             -> UrlString a
 
 -- | We choose to not provide a @Show@ instance for @UrlString@ to evade the 
--- @Monoid@ constraint in the GADT.
+-- @String@ demand.
 showUrlString :: UrlString a
               -> a
 showUrlString !(UrlString !t []) = t
@@ -83,12 +83,12 @@ expandAbsolute !x = do
   return $ host <> "/" <> showUrlString x
 
 -- | Render the Url String as absolute, but with your own configuration type.
---             
+--
 -- > data SiteConfig = SiteConfig { host :: T.Text
 -- >                              , cdnHost :: T.Text
 -- >                              }
 -- >   deriving (Show, Eq)
--- >           
+-- >
 -- > foo :: HtmlT (Reader SiteConfig) ()
 -- > foo = do
 -- >   url <- lift $ expandAbsoluteWith ("foo.php" <?> ("bar","baz")) host
@@ -112,17 +112,14 @@ expandAbsoluteWith !x f = do
 -- 
 -- > foo :: Monad m => HtmlT (RelativeUrlT m) ()
 -- > foo = do
--- >   url <- lift $ renderUrl $ "foo.php" <?> ("bar","baz")
--- >   script_ [src_ url] ""
+-- >   path <- lift $ url $ "foo.php" <?> ("bar","baz")
+-- >   script_ [src_ path] ""
 --
 -- When rendering @foo@, simply use the Transformer's @run@ function to convert 
 -- it to a reader:
 --
--- > bar :: Monad m => m LT.Text
+-- > bar :: ( Monad m, IsString a, Monoid a ) => m a
 -- > bar = (runRelativeUrlT (renderTextT foo)) "example.com"
---
--- It is generally simpler (but more restrictive) to use the non-transformer 
--- variety.
 newtype RelativeUrlT h m a = RelativeUrlT { runRelativeUrlT :: h -> m a }
   deriving Functor
 
@@ -147,16 +144,16 @@ instance ( Monad m
 --
 -- > foo :: HtmlT RelativeUrl ()
 -- > foo = do
--- >   url <- lift $ renderUrl $ "foo.php" <?> ("bar","baz")
--- >   script_ [src_ url] ""
+-- >   path <- lift $ url $ "foo.php" <?> ("bar","baz")
+-- >   script_ [src_ path] ""
 --
--- when rendering these simple monads for automatic conversion via coercion, use 
--- the @runUrlReader@ member function of the @UrlReader@ typeclass:
+-- when running the monad reader, use the @runUrlReader@ member function of the
+-- @UrlReader@ typeclass:
 --
--- > bar :: LT.Text
+-- > bar :: ( IsString a, Monoid a ) => a
 -- > bar = (runUrlReader (renderTextT foo)) "example.com"
 --
--- To change the mode of rendering, simple change the coerced type of @foo@.
+-- To change the deployment sheme, simply coerce the environment monad in @foo@.
 newtype RelativeUrl h a = RelativeUrl { runRelativeUrl :: h -> a }
   deriving Functor
 

@@ -1,5 +1,5 @@
 Name:                   urlpath
-Version:                0.0.6
+Version:                0.1
 Author:                 Athan Clark <athan.clark@gmail.com>
 Maintainer:             Athan Clark <athan.clark@gmail.com>
 License:                MIT
@@ -9,26 +9,33 @@ Synopsis:               Painfully simple URL writing combinators
 Description:
   Simple URL DSL for Haskell.
   .
-  Use raw combinators (kinda useless) ...
+  This library tries to make it easier for people to write Url strings, 
+  structurally. Packages like <https://hackage.haskell.org/package/yesod-routes Yesod Routes>
+  do a wonderful job at implementing string-free routing and 
+  references, but sometimes we have to compromise. This tries to make that 
+  compromise less painful.
   .
-  >  render $ "foo.php" <?> ("key1","bar") <&> ("key2","baz")
+  Use bare combinators to render your strings (kinda useless):
+  .
+  >  expandRelative $ "foo.php" <?> ("key1","bar") <&> ("key2","baz")
   >
   >  ↪ "foo.php?key1=bar&key2=baz"
   .
-  ... or use the MonadReader instance for a configurable root ...
+  ... or use the MonadReader instance for a configurable host:
   .
-  >  let url = runReader $ expandAbsolute $ "foo.php" <?> ("key1","bar") <&> ("key2","baz")
+  >  let url = runAbsoluteUrl $ url $ "foo.php" <?> ("key1","bar") <&> ("key2","baz")
   >  url "example.com"
   >
   >  ↪ "example.com/foo.php?key1=bar&key2=baz"
   .
-  ... in Lucid ...
+  @url@ puts the @UrlString@ in a MonadReader that we can use for applying our 
+  host. We use different monads for different deployment schemes (currently we 
+  have 3 - @RelativeUrl@, @GroundedUrl@, and @AbsoluteUrl@), which we can 
+  integrate in different libraries, like Lucid:
   .
-  >  (runReader $ renderTextT $
-  >    (\a -> do
-  >      foo <- lift $ expandAbsolute a
+  >  (runAbsoluteUrl $ renderTextT $ do
+  >      foo <- lift $ url $ "foo" <?> ("bar","baz")
   >      script_ [src_ foo] "" )
-  >    ("foo" <?> ("bar","baz"))
   >  ) "example.com"
   >
   >  ↪ "<script src=\"example.com/foo?bar=baz\"></script>"
@@ -42,18 +49,22 @@ Description:
   >      run
   >  
   >    where
-  >      rootConf = flip runReaderT "http://example.com"
+  >      rootConf = flip runAbsoluteUrl "http://example.com"
   >  
   >      run :: ( MonadIO m
-  >             , MonadReader T.Text m ) =>
+  >             , Url T.Text m ) =>
   >             ScottyT LT.Text m ()
   >      run = get "/" $ do
-  >        path <- lift $ expandAbsolute $ "foo" <?> ("bar","baz")
+  >        path <- lift $ url $ "foo" <?> ("bar","baz")
   >        text $ LT.fromStrict path
   >
   >  λ> curl localhost:3000/
   >  ↪ "http://example.com/foo?bar=baz"
-  
+  .
+  Please take mind - the string type underlying the Url rendering is generalized 
+  to @Data.String.IsString@ for convenient use with OverloadedStrings. However, 
+  due to that generality, we need to specify the monomorphic type (like 
+  @Data.Text.Text@ above).
 
 Cabal-Version:          >= 1.10
 Build-Type:             Simple
