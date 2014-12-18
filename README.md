@@ -2,6 +2,10 @@
 
 [![Build Status](https://travis-ci.org/athanclark/urlpath.svg)](https://travis-ci.org/athanclark/urlpath)
 [![Coverage Status](https://img.shields.io/coveralls/athanclark/urlpath.svg)](https://coveralls.io/r/athanclark/urlpath)
+[![Chat Room](http://img.shields.io/badge/glitter-chat--room-brightgreen.svg)](https://gitter.im/athanclark/urlpath)
+[![MIT License](http://img.shields.io/badge/license-MIT-brightgreen.svg)](https://tldrlegal.com/license/mit-license)
+[![Hackage](http://img.shields.io/badge/hackage-0.1-brightgreen.svg)](https://hackage.haskell.org/package/urlpath)
+[![Waffle Issues](https://badge.waffle.io/athanclark/urlpath.png?label=ready&title=Ready)](https://waffle.io/athanclark/urlpath)
 
 Dirt-simple, embarrassing, horribly unimaginative URL combinator library for 
 Haskell.
