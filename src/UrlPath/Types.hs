@@ -29,8 +29,8 @@ data UrlString a where
 -- @String@ demand.
 showUrlString :: UrlString a
               -> a
-showUrlString !(UrlString !t []) = t
-showUrlString !(UrlString !t ((!k,!v):xs)) =
+showUrlString (UrlString !t []) = t
+showUrlString (UrlString !t ((!k,!v):xs)) =
   t <> "?" <> k <> "=" <> v <>
     foldl (\acc (x,y) -> acc <> "&" <> x <> "=" <> y) "" xs
 
@@ -51,7 +51,7 @@ infixl 9 <?>
          UrlString a -- ^ Old Url
       -> (a, a) -- ^ Additional GET Parameter
       -> UrlString a
-(<&>) !(UrlString !t !p) !kv = UrlString t $ p ++ [kv]
+(<&>) (UrlString !t !p) !kv = UrlString t $ p ++ [kv]
 
 infixl 8 <&>
 
@@ -139,6 +139,9 @@ instance ( Monad m
          , IsString a ) => MonadReader a (RelativeUrlT a m) where
   ask = return ""
 
+instance MonadIO m => MonadIO (RelativeUrlT a m) where
+  liftIO = lift . liftIO
+
 -- | Concrete Monad for automatically coercing HtmlT's to use a mode of Url 
 -- rendering (relative, grounded, or absolute).
 --
@@ -191,6 +194,9 @@ instance ( Monad m
          , IsString a ) => MonadReader a (GroundedUrlT a m) where
   ask = return "/"
 
+instance MonadIO m => MonadIO (GroundedUrlT a m) where
+  liftIO = lift . liftIO
+
 newtype GroundedUrl h a = GroundedUrl { runGroundedUrl :: h -> a }
 
 instance Functor (GroundedUrl h) where
@@ -229,6 +235,9 @@ instance MonadTrans (AbsoluteUrlT h) where
 instance ( Monad m
          , IsString a ) => MonadReader a (AbsoluteUrlT a m) where
   ask = AbsoluteUrlT return
+
+instance MonadIO m => MonadIO (AbsoluteUrlT a m) where
+  liftIO = lift . liftIO
 
 newtype AbsoluteUrl h a = AbsoluteUrl { runAbsoluteUrl :: h -> a }
 

@@ -42,27 +42,32 @@ Description:
   .
   ... and in Scotty ...
   .
-  >  main :: IO ()
-  >  main = scottyT 3000
-  >      rootConf
-  >      rootConf
-  >      run
-  >  
-  >    where
-  >      rootConf = flip runAbsoluteUrl "http://example.com"
-  >  
-  >      run :: ( MonadIO m
-  >             , Url T.Text m ) =>
-  >             ScottyT LT.Text m ()
-  >      run = get "/" $ do
-  >        path <- lift $ url $ "foo" <?> ("bar","baz")
-  >        text $ LT.fromStrict path
+  > main :: IO ()
+  > main = scottyT 3000
+  >     rootConf
+  >     rootConf
+  >     run
+  > 
+  >   where
+  >     rootConf = flip runAbsoluteT "http://example.com"
+  > 
+  >     run :: ( MonadIO m
+  >            , MonadReader T.Text m
+  >            , Url T.Text m ) =>
+  >            ScottyT LT.Text m ()
+  >     run = get "/" $ do
+  >       path <- lift $ url $ "foo" <?> ("bar","baz")
+  >       text $ LT.fromStrict path
   >
   >  λ> curl localhost:3000/
   >  ↪ "http://example.com/foo?bar=baz"
   .
+  Note that in the scotty example, we don't use one of our deployment schemes - 
+  this is because the @scottyT@ function expects it's underlying monad to be an 
+  instance of @MonadIO@, which we can only instantiate in our monad transformers.
+  .
   Please take mind - the string type underlying the Url rendering is generalized 
-  to @Data.String.IsString@ for convenient use with OverloadedStrings. However, 
+  to @Data.String.IsString@ for convenient use with @-XOverloadedStrings@. However, 
   due to that generality, we need to specify the monomorphic type (like 
   @Data.Text.Text@ above).
 
