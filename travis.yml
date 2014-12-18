@@ -2,3 +2,7 @@ install:
   - cabal install QuickCheck quickcheck-instances hspec
 script:
   - cabal configure --enable-tests && cabal build && cabal test
+
+branches:
+  only:
+    - master
