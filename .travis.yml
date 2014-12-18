@@ -6,7 +6,7 @@ install:
   - cabal install hpc-coveralls QuickCheck quickcheck-instances hspec
 
 script:
-  - cabal configure --enable-tests --enable-library-coverage --ghc-options=-Werror && cabal build
+  - cabal configure --enable-tests --enable-library-coverage && cabal build
   - run-cabal-test --show-details=always
 
 after_script:
