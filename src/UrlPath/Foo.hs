@@ -28,16 +28,14 @@ import Data.Monoid
 class RelativeUrl a where
   url :: ( IsString b
          , Monoid b ) => a -> b
-
+{-
 instance ( IsString a
          , Monoid a ) => RelativeUrl a where
-  url :: ( IsString b
-         , Monoid b
-         , a ~ b ) => a -> b
   url = id
-
+-}
 data UrlString a where
-  UrlString :: IsString a =>
+  UrlString :: ( IsString a
+               , Monoid a ) =>
                a -- ^ Target
             -> [(a, a)] -- ^ GET parameters and values
             -> UrlString a
@@ -47,10 +45,11 @@ instance Show a => Show (UrlString a) where
   show (UrlString t ((a,b):xs)) = show t <> "?" <> show a <> "=" <> show b <>
     (foldl (\acc (x,y) -> acc <> "&" <> show x <> "=" <> show y) "" xs)
 
+-- | Never use this instance. It's merely for type agreements.
+instance IsString a => IsString (UrlString a) where
+  fromString a = UrlString a []
+
 instance RelativeUrl (UrlString a) where
-  url :: ( IsString b
-         , Monoid b
-         , a ~ b ) => UrlString a -> b
   url (UrlString t []) = t
   url (UrlString t ((a,b):xs)) = t <> "?" <> a <> "=" <> b <>
     (foldl (\acc (x,y) -> acc <> "&" <> x <> "=" <> y) "" xs)

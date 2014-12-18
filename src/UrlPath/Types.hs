@@ -15,58 +15,44 @@ import Control.Monad
 import Control.Monad.Trans
 import Control.Monad.Reader.Class
 
--- | A GET parameter encoded in a Url.
-data GETParam a where
-  GETParam :: IsString a =>
-              a
-           -> a
-           -> GETParam a
-
--- | Render a GET parameter pair.
-renderGETParam :: ( IsString a
-                  , Monoid a ) =>
-                  GETParam a
-               -> a
-renderGETParam !(GETParam !k !v) =
-  "&" <> k <> "=" <> v
-
--- | A Url string - a target page and GET parameters.
+-- | A Url string - a target page and GET parameters. We only require a 
+-- constraint of @IsString@ so that construction can be convenient, but 
+-- rendering will require a monomorphic type.
 data UrlString a where
   UrlString :: IsString a =>  
                a
-            -> [GETParam a]
+            -> [(a, a)]
             -> UrlString a
 
--- | Render a Url String /simply/ - this is equivalent to @expandRelative@.
-renderUrlString :: ( IsString a
-                   , Monoid a ) =>
-                   UrlString a
-                -> a
-renderUrlString !(UrlString !t []) = t
-renderUrlString !(UrlString !t [GETParam !k !v]) =
-  t <> "?" <> k <> "=" <> v
-renderUrlString !(UrlString !t (GETParam !k !v : ps)) =
+-- | We choose to not provide a @Show@ instance for @UrlString@ to evade the 
+-- @Monoid@ constraint in the GADT.
+showUrlString :: ( IsString a
+                 , Monoid a ) =>
+                 UrlString a
+              -> a
+showUrlString !(UrlString !t []) = t
+showUrlString !(UrlString !t ((!k,!v):xs)) =
   t <> "?" <> k <> "=" <> v <>
-    foldr (\x acc -> acc <> renderGETParam x) "" ps
+    foldl (\acc (x,y) -> acc <> "&" <> x <> "=" <> y) "" xs
 
 
--- | Lifts a target path with some GET parameter chunks into a @UrlString@.
+-- | Lifts a raw target path and a GET parameter pair into a @UrlString@.
 (<?>) :: ( IsString a
          , Monoid a ) =>
          a -- ^ Target string
       -> (a, a) -- ^ GET Parameter
       -> UrlString a
-(<?>) !t (!k,!v) = UrlString t [GETParam k v]
+(<?>) !t !kv = UrlString t [kv]
 
 infixl 9 <?>
 
--- | Adds more GET parameters to a @UrlString@.
+-- | Adds another GET parameter pair to a @UrlString@.
 (<&>) :: ( IsString a
          , Monoid a ) =>
          UrlString a -- ^ Old Url
       -> (a, a) -- ^ Additional GET Parameter
       -> UrlString a
-(<&>) !(UrlString !t !p) (!k,!v) = UrlString t $ p ++ [GETParam k v]
+(<&>) !(UrlString !t !p) !kv = UrlString t $ p ++ [kv]
 
 infixl 8 <&>
 
@@ -76,24 +62,26 @@ expandRelative :: ( IsString a
                   , Monoid a ) =>
                   UrlString a
                -> a
-expandRelative = renderUrlString
+expandRelative = showUrlString
 
 -- | Render the Url String as grounded
 expandGrounded :: ( IsString a
                   , Monoid a ) =>
                   UrlString a
                -> a
-expandGrounded x = "/" <> renderUrlString x
+expandGrounded !x = "/" <> showUrlString x
 
--- | Render the Url String as absolute - getting the root from a MonadReader.
+-- | Render the Url String as absolute - getting the root from a @MonadReader@ 
+-- context. The @Monoid@ instance will be decided monomorphically, therefore a 
+-- type signature will be needed when ran.
 expandAbsolute :: ( IsString a
                   , Monoid a
                   , MonadReader a m) =>
                   UrlString a
                -> m a
-expandAbsolute x = do
+expandAbsolute !x = do
   host <- ask
-  return $ host <> "/" <> renderUrlString x
+  return $ host <> "/" <> showUrlString x
 
 -- | Render the Url String as absolute, but with your own configuration type.
 --             
@@ -116,9 +104,9 @@ expandAbsoluteWith :: ( IsString a
                       UrlString a
                    -> (a -> a)
                    -> m a
-expandAbsoluteWith x f = do
+expandAbsoluteWith !x f = do
   root <- liftM f ask
-  return $ root <> "/" <> renderUrlString x
+  return $ root <> "/" <> showUrlString x
 
 -- | Rendering mode transformer. This isn't an instance of @UrlReader@ - to use, 
 -- simple @lift@ as many levels as you need:

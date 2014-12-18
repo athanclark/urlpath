@@ -5,7 +5,7 @@
 {-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE TypeFamilies #-}
-
+{-# LANGUAGE RankNTypes #-}
 
 module UrlPath
     ( UrlReader (..)
@@ -23,20 +23,22 @@ import Control.Monad.Trans
 import Control.Monad.Reader.Class
 
 
-class ( IsString a
-      , MonadReader a m ) => StringReader m where
-
+-- | We need a @MonadReader@ without the functional dependency. Luckily, our 
+-- only use case is an OverloadedString!
+class Monad m => StringReader (m :: * -> *) where
+  askString :: IsString a =>
+               m a
 
 -- | Convenience typeclass for a uniform interface into pure @Reader@-like 
 -- monads.
-class ( StringReader m ) => UrlReader (m :: * -> *) where
+class UrlReader (m :: * -> *) where
   runUrlReader :: IsString a =>
                   m b -- ^ Monadic reader-like computation
                -> a -- ^ @IsString@ index
                -> b -- ^ Result
 
-instance IsString a => MonadReader a Identity where
-  ask = return ""
+instance StringReader Identity where
+  askString = return ""
 
 instance UrlReader Identity where
   runUrlReader x _ = runIdentity x
@@ -51,7 +53,7 @@ instance IsString a => UrlReader (GroundedUrl a) where
   runUrlReader = runGroundedUrl
 
 -- | @Url@ takes an input type @a@, and returns a modality @f@ around @T.Text@.
-class StringReader m => Url a m where
+class Url a m where
   renderUrl ::
                a -- ^ Url-like type (@UrlString@ or @T.Text@).
             -> m b -- ^ Rendered Url in some context @f@
