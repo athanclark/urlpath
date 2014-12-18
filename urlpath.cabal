@@ -64,7 +64,7 @@ Library
   GHC-Options:          -Wall
   Exposed-Modules:      UrlPath
                         UrlPath.Types
-                        UrlPath.Fast
+                        UrlPath.Foo
   Build-Depends:        base >= 4 && < 5
                       , mtl
                       , text
