@@ -18,7 +18,6 @@ import Data.String
 import Data.Monoid
 import Control.Applicative
 import Control.Monad
-import Data.Functor.Identity
 import Control.Monad.Trans
 import Control.Monad.Reader.Class
 
