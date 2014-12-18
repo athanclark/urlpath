@@ -14,7 +14,7 @@ Haskell.
 ## Installation
 
 ```bash
-cabal install urlpath
+λ> cabal install urlpath
 ```
 
 ## Usage
@@ -77,7 +77,10 @@ main = scottyT 3000
 
 ## How to run tests
 
-HAHAHAAHAHahahahahahaha hahahaha..... haaaaa. Oh man, that was good.
+```bash
+λ> cabal install hspec QuickCheck quickcheck-instances
+λ> cabal configure --enable-tests && cabal build && cabal test
+```
 
 ## Contributing
 
