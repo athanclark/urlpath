@@ -1,15 +1,16 @@
 language: haskell
 ghc: 7.8
 
-before_install:
-  - cabal install hpc-coveralls
 install:
-  - cabal install QuickCheck quickcheck-instances hspec
+  - cabal install --only-dependencies --enable-tests
+  - cabal install hpc-coveralls QuickCheck quickcheck-instances hspec
+
 script:
-  - cabal configure --enable-tests --enable-library-coverage && cabal build && cabal test
-  - run-cabal-test
+  - cabal configure --enable-tests --enable-library-coverage --ghc-options=-Werror && cabal build
+  - run-cabal-test --show-details=always
+
 after_script:
-  - hpc-coveralls test
+  - hpc-coveralls --exclude-dir=test spec
 
 branches:
   only:
