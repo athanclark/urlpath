@@ -1,7 +1,7 @@
 # urlpath
 
 [![Build Status](https://travis-ci.org/athanclark/urlpath.svg)](https://travis-ci.org/athanclark/urlpath)
-[![Coverage Status](https://img.shields.io/coveralls/athanclark/urlpath.svg)](https://coveralls.io/r/athanclark/urlpath)
+[![Coverage Status](https://coveralls.io/repos/athanclark/urlpath/badge.png?branch=master)](https://coveralls.io/r/athanclark/urlpath)
 [![Chat Room](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/athanclark/urlpath)
 [![MIT License](http://img.shields.io/badge/license-MIT-brightgreen.svg)](https://tldrlegal.com/license/mit-license)
 [![Hackage](http://img.shields.io/badge/hackage-0.1-brightgreen.svg)](https://hackage.haskell.org/package/urlpath)
