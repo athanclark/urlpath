@@ -57,27 +57,27 @@ infixl 8 <&>
 
 
 -- | Render the Url String as relative
-expandRelative :: ( IsString a
-                  , Monoid a ) =>
-                  UrlString a
-               -> a
+expandRelative :: ( IsString plain
+                  , Monoid plain ) =>
+                  UrlString plain
+               -> plain
 expandRelative = showUrlString
 
 -- | Render the Url String as grounded
-expandGrounded :: ( IsString a
-                  , Monoid a ) =>
-                  UrlString a
-               -> a
+expandGrounded :: ( IsString plain
+                  , Monoid plain ) =>
+                  UrlString plain
+               -> plain
 expandGrounded !x = "/" <> showUrlString x
 
 -- | Render the Url String as absolute - getting the root from a @MonadReader@ 
 -- context. The @Monoid@ instance will be decided monomorphically, therefore a 
 -- type signature will be needed when ran.
-expandAbsolute :: ( MonadReader a m
-                  , IsString a
-                  , Monoid a ) =>
-                  UrlString a
-               -> m a
+expandAbsolute :: ( MonadReader plain m
+                  , IsString plain
+                  , Monoid plain ) =>
+                  UrlString plain
+               -> m plain
 expandAbsolute !x = do
   host <- ask
   return $ host <> "/" <> showUrlString x
@@ -98,11 +98,11 @@ expandAbsolute !x = do
 -- > bar = (runReader (runTextT foo)) $
 -- >   SiteConfig "example.com" "cdn.example.com"
 expandAbsoluteWith :: ( MonadReader a m
-                      , IsString a
-                      , Monoid a ) =>
-                      UrlString a
-                   -> (a -> a)
-                   -> m a
+                      , IsString plain
+                      , Monoid plain ) =>
+                      UrlString plain
+                   -> (a -> plain)
+                   -> m plain
 expandAbsoluteWith !x f = do
   root <- liftM f ask
   return $ root <> "/" <> showUrlString x
@@ -120,27 +120,30 @@ expandAbsoluteWith !x f = do
 --
 -- > bar :: ( Monad m, IsString a, Monoid a ) => m a
 -- > bar = (runRelativeUrlT (renderTextT foo)) "example.com"
-newtype RelativeUrlT h m a = RelativeUrlT { runRelativeUrlT :: h -> m a }
+newtype RelativeUrlT m h b = RelativeUrlT { runRelativeUrlT :: h -> m b }
   deriving Functor
 
-instance Applicative f => Applicative (RelativeUrlT h f) where
+instance Applicative f => Applicative (RelativeUrlT f h) where
   (<*>) f x = RelativeUrlT $ \a ->
     (<*>) (runRelativeUrlT f a) (runRelativeUrlT x a)
 
-instance Monad m => Monad (RelativeUrlT h m) where
+instance Monad m => Monad (RelativeUrlT m h) where
   return x = RelativeUrlT $ \_ -> return x
   m >>= f = RelativeUrlT $ \a ->
     runRelativeUrlT m a >>= (\x -> runRelativeUrlT (f x) a)
-
+{-
 instance MonadTrans (RelativeUrlT h) where
   lift m = RelativeUrlT (const m)
+-}
 
 instance ( Monad m
-         , IsString a ) => MonadReader a (RelativeUrlT a m) where
+         , IsString h ) => MonadReader h (RelativeUrlT m h) where
   ask = return ""
 
-instance MonadIO m => MonadIO (RelativeUrlT a m) where
+{-
+instance MonadIO m => MonadIO (RelativeUrlT m h) where
   liftIO = lift . liftIO
+-}
 
 -- | Concrete Monad for automatically coercing HtmlT's to use a mode of Url 
 -- rendering (relative, grounded, or absolute).
@@ -172,30 +175,34 @@ instance Monad (RelativeUrl h) where
 instance IsString a => MonadReader a (RelativeUrl a) where
   ask = return ""
 
-newtype GroundedUrlT h m a = GroundedUrlT { runGroundedUrlT :: h -> m a }
+newtype GroundedUrlT m h b = GroundedUrlT { runGroundedUrlT :: h -> m b }
 
-instance Functor f => Functor (GroundedUrlT h f) where
+instance Functor f => Functor (GroundedUrlT f h) where
   fmap f x = GroundedUrlT $ \a ->
     fmap f (runGroundedUrlT x a)
 
-instance Applicative f => Applicative (GroundedUrlT h f) where
+instance Applicative f => Applicative (GroundedUrlT f h) where
   (<*>) f x = GroundedUrlT $ \a ->
     (<*>) (runGroundedUrlT f a) (runGroundedUrlT x a)
 
-instance Monad m => Monad (GroundedUrlT h m) where
+instance Monad m => Monad (GroundedUrlT m h) where
   return x = GroundedUrlT $ \_ -> return x
   m >>= f = GroundedUrlT $ \a ->
     runGroundedUrlT m a >>= (\x -> runGroundedUrlT (f x) a)
 
+{-
 instance MonadTrans (GroundedUrlT h) where
   lift m = GroundedUrlT (const m)
+-}
 
 instance ( Monad m
-         , IsString a ) => MonadReader a (GroundedUrlT a m) where
+         , IsString h ) => MonadReader h (GroundedUrlT m h) where
   ask = return "/"
 
-instance MonadIO m => MonadIO (GroundedUrlT a m) where
+{-
+instance MonadIO m => MonadIO (GroundedUrlT m h) where
   liftIO = lift . liftIO
+-}
 
 newtype GroundedUrl h a = GroundedUrl { runGroundedUrl :: h -> a }
 
@@ -214,30 +221,34 @@ instance Monad (GroundedUrl h) where
 instance IsString a => MonadReader a (GroundedUrl a) where
   ask = return "/" 
   
-newtype AbsoluteUrlT h m a = AbsoluteUrlT { runAbsoluteUrlT :: h -> m a }
+newtype AbsoluteUrlT m h b = AbsoluteUrlT { runAbsoluteUrlT :: h -> m b }
 
-instance Functor f => Functor (AbsoluteUrlT h f) where
+instance Functor f => Functor (AbsoluteUrlT f h) where
   fmap f x = AbsoluteUrlT $ \a ->
     fmap f (runAbsoluteUrlT x a)
 
-instance Applicative f => Applicative (AbsoluteUrlT h f) where
+instance Applicative f => Applicative (AbsoluteUrlT f h) where
   (<*>) f x = AbsoluteUrlT $ \a ->
     (<*>) (runAbsoluteUrlT f a) (runAbsoluteUrlT x a)
 
-instance Monad m => Monad (AbsoluteUrlT h m) where
+instance Monad m => Monad (AbsoluteUrlT m h) where
   return x = AbsoluteUrlT $ const $ return x
   m >>= f = AbsoluteUrlT $ \a ->
     runAbsoluteUrlT m a >>= (\x -> runAbsoluteUrlT (f x) a)
 
+{-
 instance MonadTrans (AbsoluteUrlT h) where
   lift m = AbsoluteUrlT (const m)
+-}
 
 instance ( Monad m
-         , IsString a ) => MonadReader a (AbsoluteUrlT a m) where
+         , IsString h ) => MonadReader h (AbsoluteUrlT m h) where
   ask = AbsoluteUrlT return
 
-instance MonadIO m => MonadIO (AbsoluteUrlT a m) where
+{-
+instance MonadIO m => MonadIO (AbsoluteUrlT m h) where
   liftIO = lift . liftIO
+-}
 
 newtype AbsoluteUrl h a = AbsoluteUrl { runAbsoluteUrl :: h -> a }
 
