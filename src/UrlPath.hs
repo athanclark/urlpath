@@ -34,9 +34,9 @@ import Control.Monad.Reader.Class
 class ( IsString plain, Monoid plain, MonadReader plain (m plain) ) =>
           Url plain (m :: * -> * -> *) where
   url :: UrlString plain -- ^ Url type, parameterized over /small/ string type @string@
-      -> m plain b -- ^ Rendered Url in some context.
-  stringUrl :: plain -- ^ raw small string
-            -> m plain b -- ^ Rendered string in some context.
+      -> m plain plain -- ^ Rendered Url in some context.
+  plainUrl :: plain -- ^ raw small string
+            -> m plain plain -- ^ Rendered string in some context.
 
 -- | Overload deployment schemes with this - then, all that's needed is a type 
 -- coercion to change deployment. This only works with flat (co)monads, so monad 
@@ -52,7 +52,7 @@ class Url plain m => UrlReader plain m where
 instance ( Monoid plain
          , IsString plain ) => Url plain RelativeUrl where
   url = RelativeUrl . const . expandRelative
-  stringUrl x = RelativeUrl $ const $ expandRelative $ UrlString x []
+  plainUrl x = RelativeUrl $ const $ expandRelative $ UrlString x []
 
 instance ( Monoid plain
          , IsString plain ) => UrlReader plain RelativeUrl where
@@ -63,7 +63,7 @@ instance ( Monoid plain
 instance ( Monoid plain
          , IsString plain ) => Url plain GroundedUrl where
   url = GroundedUrl . const . expandGrounded
-  stringUrl x = GroundedUrl $ const $ expandGrounded $ UrlString x []
+  plainUrl x = GroundedUrl $ const $ expandGrounded $ UrlString x []
 
 instance ( Monoid plain
          , IsString plain ) => UrlReader plain GroundedUrl where
@@ -74,7 +74,7 @@ instance ( Monoid plain
 instance ( Monoid plain
          , IsString plain ) => Url plain AbsoluteUrl where
   url = expandAbsolute
-  stringUrl x = expandAbsolute $ UrlString x []
+  plainUrl x = expandAbsolute $ UrlString x []
 
 -- | Hand-off host prepending to the MonadReader instance
 instance ( Monoid plain
@@ -87,16 +87,16 @@ instance ( Monad m
          , Monoid plain
          , IsString plain ) => Url plain (RelativeUrlT m) where
   url = RelativeUrlT . const . return . expandRelative
-  stringUrl x = RelativeUrlT $ const $ return $ expandRelative $ UrlString x []
+  plainUrl x = RelativeUrlT $ const $ return $ expandRelative $ UrlString x []
 
 instance ( Monad m
          , Monoid plain
          , IsString plain ) => Url plain (GroundedUrlT m) where
   url = GroundedUrlT . const . return . expandGrounded
-  stringUrl x = GroundedUrlT $ const $ return $ expandGrounded $ UrlString x []
+  plainUrl x = GroundedUrlT $ const $ return $ expandGrounded $ UrlString x []
 
 instance ( Monad m
          , Monoid plain
          , IsString plain ) => Url plain (AbsoluteUrlT m) where
   url = expandAbsolute
-  stringUrl x = expandAbsolute $ UrlString x []
+  plainUrl x = expandAbsolute $ UrlString x []
