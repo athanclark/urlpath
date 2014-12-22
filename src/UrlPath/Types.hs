@@ -10,6 +10,7 @@ module UrlPath.Types where
 
 import Data.String
 import Data.Monoid
+import Data.Functor.Identity
 import Control.Applicative
 import Control.Monad
 import Control.Monad.Trans
@@ -120,30 +121,27 @@ expandAbsoluteWith !x f = do
 --
 -- > bar :: ( Monad m, IsString a, Monoid a ) => m a
 -- > bar = (runRelativeUrlT (renderTextT foo)) "example.com"
-newtype RelativeUrlT m h b = RelativeUrlT { runRelativeUrlT :: h -> m b }
+newtype RelativeUrlT h m b = RelativeUrlT { runRelativeUrlT :: h -> m b }
   deriving Functor
 
-instance Applicative f => Applicative (RelativeUrlT f h) where
+instance Applicative f => Applicative (RelativeUrlT h f) where
   (<*>) f x = RelativeUrlT $ \a ->
     (<*>) (runRelativeUrlT f a) (runRelativeUrlT x a)
 
-instance Monad m => Monad (RelativeUrlT m h) where
+instance Monad m => Monad (RelativeUrlT h m) where
   return x = RelativeUrlT $ \_ -> return x
   m >>= f = RelativeUrlT $ \a ->
     runRelativeUrlT m a >>= (\x -> runRelativeUrlT (f x) a)
-{-
+
 instance MonadTrans (RelativeUrlT h) where
-  lift m = RelativeUrlT (const m)
--}
+  lift = RelativeUrlT . const
 
 instance ( Monad m
-         , IsString h ) => MonadReader h (RelativeUrlT m h) where
+         , IsString h ) => MonadReader h (RelativeUrlT h m) where
   ask = return ""
 
-{-
-instance MonadIO m => MonadIO (RelativeUrlT m h) where
+instance MonadIO m => MonadIO (RelativeUrlT h m) where
   liftIO = lift . liftIO
--}
 
 -- | Concrete Monad for automatically coercing HtmlT's to use a mode of Url 
 -- rendering (relative, grounded, or absolute).
@@ -160,109 +158,63 @@ instance MonadIO m => MonadIO (RelativeUrlT m h) where
 -- > bar = (runUrlReader (renderTextT foo)) "example.com"
 --
 -- To change the deployment sheme, simply coerce the environment monad in @foo@.
-newtype RelativeUrl h a = RelativeUrl { runRelativeUrl :: h -> a }
+type RelativeUrl h b = RelativeUrlT h Identity b
+
+newtype GroundedUrlT h m b = GroundedUrlT { runGroundedUrlT :: h -> m b }
   deriving Functor
-
-instance Applicative (RelativeUrl h) where
-  (<*>) f x = RelativeUrl $ \a ->
-    runRelativeUrl f a (runRelativeUrl x a)
-
-instance Monad (RelativeUrl h) where
-  return x = RelativeUrl $ const x
-  m >>= f = RelativeUrl $ \a ->
-    (\y -> runRelativeUrl (f y) a) (runRelativeUrl m a)
-
-instance IsString a => MonadReader a (RelativeUrl a) where
-  ask = return ""
-
-newtype GroundedUrlT m h b = GroundedUrlT { runGroundedUrlT :: h -> m b }
-
+{-
 instance Functor f => Functor (GroundedUrlT f h) where
   fmap f x = GroundedUrlT $ \a ->
     fmap f (runGroundedUrlT x a)
+-}
 
-instance Applicative f => Applicative (GroundedUrlT f h) where
+instance Applicative f => Applicative (GroundedUrlT h f) where
   (<*>) f x = GroundedUrlT $ \a ->
     (<*>) (runGroundedUrlT f a) (runGroundedUrlT x a)
 
-instance Monad m => Monad (GroundedUrlT m h) where
+instance Monad m => Monad (GroundedUrlT h m) where
   return x = GroundedUrlT $ \_ -> return x
   m >>= f = GroundedUrlT $ \a ->
     runGroundedUrlT m a >>= (\x -> runGroundedUrlT (f x) a)
 
-{-
 instance MonadTrans (GroundedUrlT h) where
-  lift m = GroundedUrlT (const m)
--}
+  lift = GroundedUrlT . const
 
 instance ( Monad m
-         , IsString h ) => MonadReader h (GroundedUrlT m h) where
+         , IsString h ) => MonadReader h (GroundedUrlT h m) where
   ask = return "/"
 
-{-
-instance MonadIO m => MonadIO (GroundedUrlT m h) where
+instance MonadIO m => MonadIO (GroundedUrlT h m) where
   liftIO = lift . liftIO
--}
 
-newtype GroundedUrl h a = GroundedUrl { runGroundedUrl :: h -> a }
+type GroundedUrl h b = GroundedUrlT h Identity b
 
-instance Functor (GroundedUrl h) where
-  fmap f x = GroundedUrl $ \a -> f $ runGroundedUrl x a
+newtype AbsoluteUrlT h m b = AbsoluteUrlT { runAbsoluteUrlT :: h -> m b }
+  deriving Functor
 
-instance Applicative (GroundedUrl h) where
-  (<*>) f x = GroundedUrl $ \a ->
-    runGroundedUrl f a (runGroundedUrl x a)
-
-instance Monad (GroundedUrl h) where
-  return x = GroundedUrl $ const x
-  m >>= f = GroundedUrl $ \a ->
-    (\y -> runGroundedUrl (f y) a) (runGroundedUrl m a)
-
-instance IsString a => MonadReader a (GroundedUrl a) where
-  ask = return "/" 
-  
-newtype AbsoluteUrlT m h b = AbsoluteUrlT { runAbsoluteUrlT :: h -> m b }
-
+{-
 instance Functor f => Functor (AbsoluteUrlT f h) where
   fmap f x = AbsoluteUrlT $ \a ->
     fmap f (runAbsoluteUrlT x a)
+-}
 
-instance Applicative f => Applicative (AbsoluteUrlT f h) where
+instance Applicative f => Applicative (AbsoluteUrlT h f) where
   (<*>) f x = AbsoluteUrlT $ \a ->
     (<*>) (runAbsoluteUrlT f a) (runAbsoluteUrlT x a)
 
-instance Monad m => Monad (AbsoluteUrlT m h) where
+instance Monad m => Monad (AbsoluteUrlT h m) where
   return x = AbsoluteUrlT $ const $ return x
   m >>= f = AbsoluteUrlT $ \a ->
     runAbsoluteUrlT m a >>= (\x -> runAbsoluteUrlT (f x) a)
 
-{-
 instance MonadTrans (AbsoluteUrlT h) where
-  lift m = AbsoluteUrlT (const m)
--}
+  lift = AbsoluteUrlT . const
 
 instance ( Monad m
-         , IsString h ) => MonadReader h (AbsoluteUrlT m h) where
+         , IsString h ) => MonadReader h (AbsoluteUrlT h m) where
   ask = AbsoluteUrlT return
 
-{-
-instance MonadIO m => MonadIO (AbsoluteUrlT m h) where
+instance MonadIO m => MonadIO (AbsoluteUrlT h m) where
   liftIO = lift . liftIO
--}
 
-newtype AbsoluteUrl h a = AbsoluteUrl { runAbsoluteUrl :: h -> a }
-
-instance Functor (AbsoluteUrl h) where
-  fmap f x = AbsoluteUrl $ \a -> f $ runAbsoluteUrl x a
-
-instance Applicative (AbsoluteUrl h) where
-  (<*>) f x = AbsoluteUrl $ \a ->
-    runAbsoluteUrl f a (runAbsoluteUrl x a)
-
-instance Monad (AbsoluteUrl h) where
-  return x = AbsoluteUrl $ const x
-  m >>= f = AbsoluteUrl $ \a ->
-    (\y -> runAbsoluteUrl (f y) a) (runAbsoluteUrl m a)
-
-instance IsString a => MonadReader a (AbsoluteUrl a) where
-  ask = AbsoluteUrl id
+type AbsoluteUrl h b = AbsoluteUrlT h Identity b
