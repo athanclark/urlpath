@@ -47,6 +47,7 @@ class ( IsString plain
 -- coercion to change deployment. This only works with flat (co)monads, so monad 
 -- transformers are out.
 class Url plain m => UrlReader plain m where
+  type Result m :: * -> *
   runUrlReader :: Url plain m =>
                   m b -- ^ MonadReader with index @string@ and result @b@
                -> plain -- ^ Reader index
