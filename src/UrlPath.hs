@@ -24,26 +24,23 @@ import Control.Monad.Reader.Class
 
 
 -- | @Url@ is a relationship between an underlying (monomorphic) string type
--- @string@, and a deployment context @m@. We try to make the deployment and 
--- implementation type coercible at the top level - coercing your final 
--- expression to @String@ or @T.Text@ will have /all/ use-cases coerce to that 
--- type, similarly with the deployment scheme.
---
--- We chose to not force @MonadReader@ as a superclass for @m@ due to the 
--- monomorphic demand on functional dependencies.
+-- @plain@, and a deployment context @m@. We try to make the deployment style
+-- coercible at the top level - if the
+-- expression has a type @Url String (AbsoluteUrlT String Identity)@
+-- or @Monad m => Url T.Text (GroundedUrlT LT.Text m)@ will force /all use-cases
+-- within the expression/ to coerce to that type.
 class ( IsString plain
       , Monoid plain
       , MonadReader plain m
       ) => Url plain (m :: * -> *) where
-  url :: UrlString plain -- ^ Url type, parameterized over /small/ string type @string@
-      -> m plain -- ^ Rendered Url in some context.
-  plainUrl :: plain -- ^ raw small string
-            -> m plain -- ^ Rendered string in some context.
+  url :: UrlString plain -- ^ Url type, parameterized over a string type @plain@
+      -> m plain         -- ^ Rendered Url in some context.
+  plainUrl :: plain   -- ^ raw small string
+           -> m plain -- ^ Rendered string in some context.
 
 
 -- | Overload deployment schemes with this - then, all that's needed is a type 
--- coercion to change deployment. This only works with flat (co)monads, so monad 
--- transformers are out.
+-- coercion to change deployment.
 class Url plain m => UrlReader plain m where
   type Result m :: * -> *
   runUrlReader :: Url plain m =>
@@ -51,7 +48,6 @@ class Url plain m => UrlReader plain m where
                -> plain -- ^ Reader index
                -> Result m b -- ^ Final result
 
--- * Transformers
 
 instance ( Monad m
          , Monoid plain

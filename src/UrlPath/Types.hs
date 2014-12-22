@@ -16,8 +16,8 @@ import Control.Monad
 import Control.Monad.Trans
 import Control.Monad.Reader.Class
 
--- | A Url string - a target page and GET parameters. We only require a 
--- constraint of @IsString@ so that construction can be convenient, but 
+-- | A Url string - a "target" and GET parameters. We require @IsString@
+-- and @Monoid@ so that construction can be convenient and generic, but 
 -- rendering will require a monomorphic type.
 data UrlString a where
   UrlString :: ( IsString a
@@ -27,7 +27,7 @@ data UrlString a where
             -> UrlString a
 
 -- | We choose to not provide a @Show@ instance for @UrlString@ to evade the 
--- @String@ demand.
+-- @String@ restriction.
 showUrlString :: UrlString a
               -> a
 showUrlString (UrlString !t []) = t
@@ -39,7 +39,7 @@ showUrlString (UrlString !t ((!k,!v):xs)) =
 -- | Lifts a raw target path and a GET parameter pair into a @UrlString@.
 (<?>) :: ( IsString a
          , Monoid a ) =>
-         a -- ^ Target string
+         a      -- ^ Target string
       -> (a, a) -- ^ GET Parameter
       -> UrlString a
 (<?>) !t !kv = UrlString t [kv]
@@ -50,7 +50,7 @@ infixl 9 <?>
 (<&>) :: ( IsString a
          , Monoid a ) =>
          UrlString a -- ^ Old Url
-      -> (a, a) -- ^ Additional GET Parameter
+      -> (a, a)      -- ^ Additional GET Parameter
       -> UrlString a
 (<&>) (UrlString !t !p) !kv = UrlString t $ p ++ [kv]
 
@@ -108,19 +108,6 @@ expandAbsoluteWith !x f = do
   root <- liftM f ask
   return $ root <> "/" <> showUrlString x
 
--- | Rendering mode transformer. This isn't an instance of @UrlReader@ - to use, 
--- simple @lift@ as many levels as you need:
--- 
--- > foo :: Monad m => HtmlT (RelativeUrlT m) ()
--- > foo = do
--- >   path <- lift $ url $ "foo.php" <?> ("bar","baz")
--- >   script_ [src_ path] ""
---
--- When rendering @foo@, simply use the Transformer's @run@ function to convert 
--- it to a reader:
---
--- > bar :: ( Monad m, IsString a, Monoid a ) => m a
--- > bar = (runRelativeUrlT (renderTextT foo)) "example.com"
 newtype RelativeUrlT h m b = RelativeUrlT { runRelativeUrlT :: h -> m b }
   deriving Functor
 
@@ -143,30 +130,10 @@ instance ( Monad m
 instance MonadIO m => MonadIO (RelativeUrlT h m) where
   liftIO = lift . liftIO
 
--- | Concrete Monad for automatically coercing HtmlT's to use a mode of Url 
--- rendering (relative, grounded, or absolute).
---
--- > foo :: HtmlT RelativeUrl ()
--- > foo = do
--- >   path <- lift $ url $ "foo.php" <?> ("bar","baz")
--- >   script_ [src_ path] ""
---
--- when running the monad reader, use the @runUrlReader@ member function of the
--- @UrlReader@ typeclass:
---
--- > bar :: ( IsString a, Monoid a ) => a
--- > bar = (runUrlReader (renderTextT foo)) "example.com"
---
--- To change the deployment sheme, simply coerce the environment monad in @foo@.
 type RelativeUrl h b = RelativeUrlT h Identity b
 
 newtype GroundedUrlT h m b = GroundedUrlT { runGroundedUrlT :: h -> m b }
   deriving Functor
-{-
-instance Functor f => Functor (GroundedUrlT f h) where
-  fmap f x = GroundedUrlT $ \a ->
-    fmap f (runGroundedUrlT x a)
--}
 
 instance Applicative f => Applicative (GroundedUrlT h f) where
   (<*>) f x = GroundedUrlT $ \a ->
@@ -191,12 +158,6 @@ type GroundedUrl h b = GroundedUrlT h Identity b
 
 newtype AbsoluteUrlT h m b = AbsoluteUrlT { runAbsoluteUrlT :: h -> m b }
   deriving Functor
-
-{-
-instance Functor f => Functor (AbsoluteUrlT f h) where
-  fmap f x = AbsoluteUrlT $ \a ->
-    fmap f (runAbsoluteUrlT x a)
--}
 
 instance Applicative f => Applicative (AbsoluteUrlT h f) where
   (<*>) f x = AbsoluteUrlT $ \a ->
