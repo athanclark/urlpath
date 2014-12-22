@@ -21,8 +21,9 @@ Haskell.
 
 You can use the combinators purely, if you're into that:
 
+
 ```haskell
-λ> render $ "foo.asp" <?> ("key1","bar") <&> ("key2","baz")
+λ> expandRelative $ "foo.php" <?> ("key1","bar") <&> ("key2","baz")
 
 ↪ "foo.asp?key1=bar&key2=baz"
 ```
@@ -31,21 +32,21 @@ Or you can use them with a configurable root, via the Reader monad:
 
 ```haskell
 λ> runReader
-     (expandAbsolute $ "foo.asp" <?> ("key1","bar") <&> ("key2","baz"))
+     (runAbsoluteUrl $ url $ "foo.asp" <?> ("key1","bar") <&> ("key2","baz"))
      "http://example.com"
 
 ↪ "http://example.com/foo.asp?key1=bar&key2=baz"
 ```
-
-... We can also do things in Lucid:
+`url` puts the `UrlString` in a MonadReader that we can use for applying our⋅
+host. We use different monads for different deployment schemes (currently we⋅
+have 3 - `RelativeUrlT`, `GroundedUrlT`, and `AbsoluteUrlT`), which we can⋅
+integrate in different libraries, like Lucid:
 
 ```haskell
-λ> runReader ( renderTextT $
-     (\a -> do
-         foo <- lift $ expandAbsolute a
-         script_ [src_ foo] ""
-       ) $ "foo" <?> ("bar","baz")
-     ) "http://example.com"
+λ> (runAbsoluteUrl $ renderTextT $ do
+     foo <- lift $ url $ "foo" <?> ("bar","baz")
+     script_ [src_ foo] "" )
+   ) "example.com"
 
 ↪ "<script src=\"example.com/foo?bar=baz\"></script>"
 ```
@@ -60,13 +61,14 @@ main = scottyT 3000
     run
 
   where
-    rootConf = flip runReaderT "http://example.com"
+    rootConf = flip runAbsoluteT "http://example.com"
 
     run :: ( MonadIO m
-           , MonadReader T.Text m ) =>
+           , MonadReader T.Text m
+           , Url T.Text m ) =>
            ScottyT LT.Text m ()
     run = get "/" $ do
-      path <- lift $ expandAbsolute $ "foo" <?> ("bar","baz")
+      path <- lift $ url $ "foo" <?> ("bar","baz")
       text $ LT.fromStrict path
 ```
 
@@ -78,10 +80,14 @@ main = scottyT 3000
 ## How to run tests
 
 ```bash
-λ> cabal install hspec QuickCheck quickcheck-instances
-λ> cabal configure --enable-tests && cabal build && cabal test
+λ> cabal install hspec --enable-tests && cabal test --show-details=always
 ```
 
 ## Contributing
 
-`¯\_(ツ)_/¯`
+I would prefer it that any inquiries and questions go to the
+[Gitter Chat room](https://gitter.im/athanclark/urlpath), while any suggestions, 
+complaints, or requests go in the
+[GitHub Issues](https://github.com/athanclark/urlpath/issues) /
+[Waffle Dashboard](https://waffle.io/athanclark/urlpath). All ideas are welcome! 
+(Except really gross ones. I've got limits.)
