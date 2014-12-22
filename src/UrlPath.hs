@@ -34,14 +34,12 @@ import Control.Monad.Reader.Class
 class ( IsString plain
       , Monoid plain
       , MonadReader plain m
-      ) =>
-          Url plain (m :: * -> *) where
+      ) => Url plain (m :: * -> *) where
   url :: UrlString plain -- ^ Url type, parameterized over /small/ string type @string@
       -> m plain -- ^ Rendered Url in some context.
   plainUrl :: plain -- ^ raw small string
             -> m plain -- ^ Rendered string in some context.
 
--- ************ CLIP?
 
 -- | Overload deployment schemes with this - then, all that's needed is a type 
 -- coercion to change deployment. This only works with flat (co)monads, so monad 
@@ -51,60 +49,42 @@ class Url plain m => UrlReader plain m where
   runUrlReader :: Url plain m =>
                   m b -- ^ MonadReader with index @string@ and result @b@
                -> plain -- ^ Reader index
-               -> b -- ^ Final result
-
--- ************
-
--- * Monads
-
-instance ( Monoid plain
-         , IsString plain ) => Url plain RelativeUrl where
-  url = RelativeUrl . const . expandRelative
-  plainUrl x = RelativeUrl $ const $ expandRelative $ UrlString x []
-
-instance ( Monoid plain
-         , IsString plain ) => UrlReader plain RelativeUrl where
-  runUrlReader = runRelativeUrl
-
----
-
-instance ( Monoid plain
-         , IsString plain ) => Url plain GroundedUrl where
-  url = GroundedUrl . const . expandGrounded
-  plainUrl x = GroundedUrl $ const $ expandGrounded $ UrlString x []
-
-instance ( Monoid plain
-         , IsString plain ) => UrlReader plain GroundedUrl where
-  runUrlReader = runGroundedUrl
-
----
-
-instance ( Monoid plain
-         , IsString plain ) => Url plain AbsoluteUrl where
-  url = expandAbsolute
-  plainUrl x = expandAbsolute $ UrlString x []
-
--- | Hand-off host prepending to the MonadReader instance
-instance ( Monoid plain
-         , IsString plain ) => UrlReader plain AbsoluteUrl where
-  runUrlReader = runAbsoluteUrl
+               -> Result m b -- ^ Final result
 
 -- * Transformers
 
 instance ( Monad m
          , Monoid plain
-         , IsString plain ) => Url plain (RelativeUrlT m) where
+         , IsString plain ) => Url plain (RelativeUrlT plain m) where
   url = RelativeUrlT . const . return . expandRelative
   plainUrl x = RelativeUrlT $ const $ return $ expandRelative $ UrlString x []
 
 instance ( Monad m
          , Monoid plain
-         , IsString plain ) => Url plain (GroundedUrlT m) where
+         , IsString plain ) => UrlReader plain (RelativeUrlT plain m) where
+  type Result (RelativeUrlT plain m) = m
+  runUrlReader = runRelativeUrlT
+
+instance ( Monad m
+         , Monoid plain
+         , IsString plain ) => Url plain (GroundedUrlT plain m) where
   url = GroundedUrlT . const . return . expandGrounded
   plainUrl x = GroundedUrlT $ const $ return $ expandGrounded $ UrlString x []
 
 instance ( Monad m
          , Monoid plain
-         , IsString plain ) => Url plain (AbsoluteUrlT m) where
+         , IsString plain ) => UrlReader plain (GroundedUrlT plain m) where
+  type Result (GroundedUrlT plain m) = m
+  runUrlReader = runGroundedUrlT
+
+instance ( Monad m
+         , Monoid plain
+         , IsString plain ) => Url plain (AbsoluteUrlT plain m) where
   url = expandAbsolute
   plainUrl x = expandAbsolute $ UrlString x []
+
+instance ( Monad m
+         , Monoid plain
+         , IsString plain ) => UrlReader plain (AbsoluteUrlT plain m) where
+  type Result (AbsoluteUrlT plain m) = m
+  runUrlReader = runAbsoluteUrlT
