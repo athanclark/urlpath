@@ -31,21 +31,28 @@ import Control.Monad.Reader.Class
 --
 -- We chose to not force @MonadReader@ as a superclass for @m@ due to the 
 -- monomorphic demand on functional dependencies.
-class ( IsString plain, Monoid plain, MonadReader plain (m plain) ) =>
-          Url plain (m :: * -> * -> *) where
+class ( IsString plain
+      , Monoid plain
+      , MonadReader plain m
+      ) =>
+          Url plain (m :: * -> *) where
   url :: UrlString plain -- ^ Url type, parameterized over /small/ string type @string@
-      -> m plain plain -- ^ Rendered Url in some context.
+      -> m plain -- ^ Rendered Url in some context.
   plainUrl :: plain -- ^ raw small string
-            -> m plain plain -- ^ Rendered string in some context.
+            -> m plain -- ^ Rendered string in some context.
+
+-- ************ CLIP?
 
 -- | Overload deployment schemes with this - then, all that's needed is a type 
 -- coercion to change deployment. This only works with flat (co)monads, so monad 
 -- transformers are out.
 class Url plain m => UrlReader plain m where
   runUrlReader :: Url plain m =>
-                  m plain b -- ^ MonadReader with index @string@ and result @b@
+                  m b -- ^ MonadReader with index @string@ and result @b@
                -> plain -- ^ Reader index
                -> b -- ^ Final result
+
+-- ************
 
 -- * Monads
 
