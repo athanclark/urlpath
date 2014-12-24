@@ -39,7 +39,7 @@ class ( IsString plain
            -> m plain -- ^ Rendered string in some context.
 
 
--- | Overload deployment schemes with this - then, all that's needed is a type 
+-- | Overload deployment schemes with this - then, all that's needed is a type
 -- coercion to change deployment.
 class Url plain m => UrlReader plain m where
   type Result m :: * -> *
