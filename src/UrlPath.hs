@@ -39,12 +39,9 @@ class ( IsString plain
            -> m plain -- ^ Rendered string in some context.
 
 
--- | A @UrlReader@ is a @ReaderT@ monad transformer, that just has conventions 
--- associated with it to decide how to "deploy".
---
--- In the sense I'm using here, "deployment" is really "how the hostname gets 
--- added to /all urls/". Change the deployment scheme by coerciing the Monad Reader.
-class Url plain m => UrlReader plain (m :: * -> *) where
+-- | Overload deployment schemes with this - then, all that's needed is a type
+-- coercion to change deployment.
+class Url plain m => UrlReader plain m where
   type Result m :: * -> *
   runUrlReader :: Url plain m =>
                   m b -- ^ MonadReader with index @string@ and result @b@
