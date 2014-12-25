@@ -21,14 +21,14 @@ import Control.Monad
 import Control.Monad.Trans
 import Control.Monad.Reader.Class
 
-
+-- * Classes
 
 -- | @Url@ is a relationship between an underlying (monomorphic) string type
 -- @plain@, and a deployment context @m@. We try to make the deployment style
--- coercible at the top level - if the
--- expression has a type @Url String (AbsoluteUrlT String Identity)@
--- or @Monad m => Url T.Text (GroundedUrlT LT.Text m)@ will force /all use-cases
--- within the expression/ to coerce to that type.
+-- coercible at the top level - if the expression has a type
+-- @Url String (AbsoluteUrlT String Identity)@ or
+-- @Monad m => Url T.Text (GroundedUrlT LT.Text m)@ will force
+-- /all use-cases within the expression/ to coerce to that type.
 class ( IsString plain
       , Monoid plain
       , MonadReader plain m
@@ -39,9 +39,12 @@ class ( IsString plain
            -> m plain -- ^ Rendered string in some context.
 
 
--- | Overload deployment schemes with this - then, all that's needed is a type 
--- coercion to change deployment.
-class Url plain m => UrlReader plain m where
+-- | A @UrlReader@ is a @ReaderT@ monad transformer, that just has conventions 
+-- associated with it to decide how to "deploy".
+--
+-- In the sense I'm using here, "deployment" is really "how the hostname gets 
+-- added to /all urls/". Change the deployment scheme by coerciing the Monad Reader.
+class Url plain m => UrlReader plain (m :: * -> *) where
   type Result m :: * -> *
   runUrlReader :: Url plain m =>
                   m b -- ^ MonadReader with index @string@ and result @b@

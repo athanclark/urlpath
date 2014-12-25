@@ -16,9 +16,11 @@ import Control.Monad
 import Control.Monad.Trans
 import Control.Monad.Reader.Class
 
--- | A Url string - a "target" and GET parameters. We require @IsString@
--- and @Monoid@ so that construction can be convenient and generic, but 
--- rendering will require a monomorphic type.
+-- | Abstract data type for a Url - a "target" and GET parameters. We require @IsString@
+-- and @Monoid@ for generic construction, but rendering will require a monomorphic type.
+--
+-- The type constructor is parameterized over it's underlying @IsString@ & 
+-- @Monoid@ instance.
 data UrlString a where
   UrlString :: ( IsString a
                , Monoid a ) =>
@@ -26,8 +28,8 @@ data UrlString a where
             -> [(a, a)]
             -> UrlString a
 
--- | We choose to not provide a @Show@ instance for @UrlString@ to evade the 
--- @String@ restriction.
+-- | We can't provide a @Show@ instance for @UrlString@ because that would force 
+-- us to use @String@.
 showUrlString :: UrlString a
               -> a
 showUrlString (UrlString !t []) = t
@@ -36,7 +38,7 @@ showUrlString (UrlString !t ((!k,!v):xs)) =
     foldl (\acc (x,y) -> acc <> "&" <> x <> "=" <> y) "" xs
 
 
--- | Lifts a raw target path and a GET parameter pair into a @UrlString@.
+-- | Makes a @UrlString@ out of a raw target path and a GET parameter pair.
 (<?>) :: ( IsString a
          , Monoid a ) =>
          a      -- ^ Target string
@@ -57,14 +59,14 @@ infixl 9 <?>
 infixl 8 <&>
 
 
--- | Render the Url String as relative
+-- | Render the Url String flatly - without anything prepended to the target.
 expandRelative :: ( IsString plain
                   , Monoid plain ) =>
                   UrlString plain
                -> plain
 expandRelative = showUrlString
 
--- | Render the Url String as grounded
+-- | Render the Url String as grounded - prepended with a "root" @//@ character.
 expandGrounded :: ( IsString plain
                   , Monoid plain ) =>
                   UrlString plain
@@ -72,8 +74,7 @@ expandGrounded :: ( IsString plain
 expandGrounded !x = "/" <> showUrlString x
 
 -- | Render the Url String as absolute - getting the root from a @MonadReader@ 
--- context. The @Monoid@ instance will be decided monomorphically, therefore a 
--- type signature will be needed when ran.
+-- context.
 expandAbsolute :: ( MonadReader plain m
                   , IsString plain
                   , Monoid plain ) =>
