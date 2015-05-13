@@ -99,6 +99,7 @@ Test-Suite spec
                       , mtl
                       , text
                       , transformers
+                      , monoid-subclasses
 
 benchmark bench
   type:                 exitcode-stdio-1.0
