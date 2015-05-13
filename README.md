@@ -4,7 +4,7 @@
 [![Coverage Status](https://coveralls.io/repos/athanclark/urlpath/badge.png?branch=master)](https://coveralls.io/r/athanclark/urlpath)
 [![Chat Room](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/athanclark/urlpath)
 [![MIT License](http://img.shields.io/badge/license-MIT-brightgreen.svg)](https://tldrlegal.com/license/mit-license)
-[![Hackage](http://img.shields.io/badge/hackage-0.2-brightgreen.svg)](https://hackage.haskell.org/package/urlpath)
+[![Hackage](http://img.shields.io/badge/hackage-1.0.0-brightgreen.svg)](https://hackage.haskell.org/package/urlpath)
 [![Waffle Issues](https://badge.waffle.io/athanclark/urlpath.png?label=ready&title=Ready)](https://waffle.io/athanclark/urlpath)
 
 Dirt-simple, embarrassing, horribly unimaginative URL combinator library for 
