@@ -6,12 +6,12 @@
   , FlexibleInstances
   , MultiParamTypeClasses
   , DeriveFunctor
-  , StandaloneDeriving
   #-}
 
 module Data.Url.Types where
 
 import Data.String
+import Data.List
 import Data.Monoid
 import Data.Monoid.Textual (TextualMonoid)
 import Data.Functor.Identity
@@ -58,6 +58,15 @@ infixl 9 <?>
 (<&>) (UrlString !t !p) !kv = UrlString t $ p ++ [kv]
 
 infixl 8 <&>
+
+
+fromRoute :: ( TextualMonoid a ) =>
+             ([a], [(a, a)])
+          -> UrlString a
+fromRoute (l,qs) = UrlString (intercalate' "/" l) qs
+  where
+    intercalate' c [s] = s
+    intercalate' c (s:ss) = s <> c <> intercalate' c ss
 
 
 -- | Render the Url String flatly - without anything prepended to the target.
