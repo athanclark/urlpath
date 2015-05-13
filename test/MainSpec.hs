@@ -15,6 +15,7 @@ import qualified Data.Text as T
 
 import Data.String
 import Data.Monoid
+import Data.Monoid.Textual (TextualMonoid)
 import Data.Functor.Identity
 
 main :: IO ()
@@ -61,8 +62,7 @@ testPath pathRunner d host target keyval = do
     === (rawRender host' target keyval)
 
   where
-    urlStringTail :: ( IsString a
-                     , Monoid a
+    urlStringTail :: ( TextualMonoid a
                      ) => a -> [(a,a)] -> UrlString a
 
     urlStringTail t [] = UrlString t []
@@ -72,16 +72,14 @@ testPath pathRunner d host target keyval = do
 
 
 -- | Manual Url rendering
-rawRender :: ( IsString a
-             , Monoid a
+rawRender :: ( TextualMonoid a
              ) => a -> a -> [(a,a)] -> a
 rawRender rawHost target kvs =
   rawHost <> target <> rawUrlTail kvs
 
 
 -- | Manually intercalate characters
-rawUrlTail :: ( IsString a
-              , Monoid a
+rawUrlTail :: ( TextualMonoid a
               ) => [(a,a)] -> a
 rawUrlTail [] = ""
 rawUrlTail [(k,v)] = "?" <> k <> "=" <> v
