@@ -26,7 +26,7 @@ import Control.Monad.Reader.Class
 
 -- * Classes
 
--- | @Url@ is a relationship between an underlying (monomorphic) string type
+-- | @Url@ is a relationship between an underlying string type
 -- @plain@, and a deployment context @m@. We try to make the deployment style
 -- coercible at the top level - if the expression has a type
 -- @Url String (AbsoluteUrlT String Identity)@ or
@@ -35,8 +35,8 @@ import Control.Monad.Reader.Class
 class ( TextualMonoid plain
       , MonadReader plain m
       ) => Url plain (m :: * -> *) where
-  url :: UrlString plain -- ^ Url type, parameterized over a string type @plain@
-      -> m plain         -- ^ Rendered Url in some context.
+  queryUrl :: QueryString plain -- ^ Url type, parameterized over a string type @plain@
+           -> m plain           -- ^ Rendered Url in some context.
   plainUrl :: plain   -- ^ raw small string
            -> m plain -- ^ Rendered string in some context.
 
@@ -53,8 +53,8 @@ class Url plain m => UrlReader plain m where
 
 instance ( Monad m
          , TextualMonoid plain ) => Url plain (RelativeUrlT plain m) where
-  url = RelativeUrlT . const . return . expandRelative
-  plainUrl x = RelativeUrlT $ const $ return $ expandRelative $ UrlString x []
+  queryUrl = RelativeUrlT . const . return . expandRelative
+  plainUrl x = RelativeUrlT $ const $ return $ expandRelative $ QueryString x [] Nothing
 
 instance ( Monad m
          , TextualMonoid plain ) => UrlReader plain (RelativeUrlT plain m) where
@@ -63,8 +63,8 @@ instance ( Monad m
 
 instance ( Monad m
          , TextualMonoid plain ) => Url plain (GroundedUrlT plain m) where
-  url = GroundedUrlT . const . return . expandGrounded
-  plainUrl x = GroundedUrlT $ const $ return $ expandGrounded $ UrlString x []
+  queryUrl = GroundedUrlT . const . return . expandGrounded
+  plainUrl x = GroundedUrlT $ const $ return $ expandGrounded $ QueryString x [] Nothing
 
 instance ( Monad m
          , TextualMonoid plain ) => UrlReader plain (GroundedUrlT plain m) where
@@ -73,8 +73,8 @@ instance ( Monad m
 
 instance ( Monad m
          , TextualMonoid plain ) => Url plain (AbsoluteUrlT plain m) where
-  url = expandAbsolute
-  plainUrl x = expandAbsolute $ UrlString x []
+  queryUrl = expandAbsolute
+  plainUrl x = expandAbsolute $ QueryString x [] Nothing
 
 instance ( Monad m
          , TextualMonoid plain ) => UrlReader plain (AbsoluteUrlT plain m) where

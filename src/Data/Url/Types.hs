@@ -25,45 +25,60 @@ import Control.Monad.Reader.Class
 --
 -- The type constructor is parameterized over it's underlying @IsString@ &
 -- @Monoid@ instance.
-data UrlString a where
-  UrlString :: ( TextualMonoid a ) =>
-               a
-            -> [(a, a)]
-            -> UrlString a
+data QueryString a where
+  QueryString :: ( TextualMonoid a ) =>
+                 a -- location
+              -> [(a, a)] -- query parameters
+              -> Maybe a -- hash
+              -> QueryString a
 
--- | We can't provide a @Show@ instance for @UrlString@ because that would force
+-- | We can't provide a @Show@ instance for @QueryString@ because that would force
 -- us to use @String@.
-showUrlString :: UrlString a
+showUrlString :: QueryString a
               -> a
-showUrlString (UrlString !t []) = t
-showUrlString (UrlString !t ((!k,!v):xs)) =
-  t <> "?" <> k <> "=" <> v <>
-    foldl (\acc (x,y) -> acc <> "&" <> x <> "=" <> y) "" xs
+showUrlString (QueryString !t [] !mh) =
+  maybe t (\h -> t <> "#" <> h) mh
+showUrlString (QueryString !t ((!k,!v):xs) !mh) =
+  let b = t <> "?" <> k <> "=" <> v <>
+            foldl (\acc (x,y) -> acc <> "&" <> x <> "=" <> y) "" xs
+  in
+  maybe b (\h -> b <> "#" <> h) mh
 
 
--- | Makes a @UrlString@ out of a raw target path and a GET parameter pair.
+-- | Makes a @QueryString@ out of a raw target path and a GET parameter pair.
 (<?>) :: ( TextualMonoid a ) =>
          a      -- ^ Target string
       -> (a, a) -- ^ GET Parameter
-      -> UrlString a
-(<?>) !t !kv = UrlString t [kv]
+      -> QueryString a
+(<?>) !t !kv = QueryString t [kv] Nothing
 
 infixl 9 <?>
 
--- | Adds another GET parameter pair to a @UrlString@.
+-- | Adds another GET parameter pair to a @QueryString@.
 (<&>) :: ( TextualMonoid a ) =>
-         UrlString a -- ^ Old Url
+         QueryString a -- ^ Old Url
       -> (a, a)      -- ^ Additional GET Parameter
-      -> UrlString a
-(<&>) (UrlString !t !p) !kv = UrlString t $ p ++ [kv]
+      -> QueryString a
+(<&>) (QueryString !t !p _) !kv = QueryString t (p ++ [kv]) Nothing
 
 infixl 8 <&>
 
+class Hashable l r where
+  -- | Adds a hash parameter to a @QueryString@.
+  (<#>) :: l -> r -> QueryString r
+
+instance ( TextualMonoid a ) => Hashable a a where
+  (<#>) t h = QueryString t [] $ Just h
+
+instance ( TextualMonoid a ) => Hashable (QueryString a) a where
+  (<#>) (QueryString !t !p _) !h = QueryString t p $ Just h
+
+infixl 7 <#>
 
 fromRoute :: ( TextualMonoid a ) =>
              ([a], [(a, a)])
-          -> UrlString a
-fromRoute (l,qs) = UrlString (intercalate' "/" l) qs
+          -> QueryString a
+fromRoute (l,qs) = QueryString (intercalate' "/" l) qs Nothing
   where
     intercalate' c [s] = s
     intercalate' c (s:ss) = s <> c <> intercalate' c ss
@@ -71,13 +86,13 @@ fromRoute (l,qs) = UrlString (intercalate' "/" l) qs
 
 -- | Render the Url String flatly - without anything prepended to the target.
 expandRelative :: ( TextualMonoid plain ) =>
-                  UrlString plain
+                  QueryString plain
                -> plain
 expandRelative = showUrlString
 
 -- | Render the Url String as grounded - prepended with a "root" @//@ character.
 expandGrounded :: ( TextualMonoid plain ) =>
-                  UrlString plain
+                  QueryString plain
                -> plain
 expandGrounded !x = "/" <> showUrlString x
 
@@ -85,7 +100,7 @@ expandGrounded !x = "/" <> showUrlString x
 -- context.
 expandAbsolute :: ( MonadReader plain m
                   , TextualMonoid plain ) =>
-                  UrlString plain
+                  QueryString plain
                -> m plain
 expandAbsolute !x = do
   host <- ask
@@ -108,7 +123,7 @@ expandAbsolute !x = do
 -- >   SiteConfig "example.com" "cdn.example.com"
 expandAbsoluteWith :: ( MonadReader a m
                       , TextualMonoid plain ) =>
-                      UrlString plain
+                      QueryString plain
                    -> (a -> plain)
                    -> m plain
 expandAbsoluteWith !x f = do
