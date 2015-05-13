@@ -1,10 +1,10 @@
 Name:                   urlpath
-Version:                0.2
+Version:                1.0.0
 Author:                 Athan Clark <athan.clark@gmail.com>
 Maintainer:             Athan Clark <athan.clark@gmail.com>
 License:                MIT
 License-File:           LICENSE
-Category:               Web
+Category:               Web, Data
 Synopsis:               Painfully simple URL writing combinators
 Description:
   Simple URL DSL for Haskell.
@@ -78,11 +78,12 @@ Library
   Default-Language:     Haskell2010
   HS-Source-Dirs:       src
   GHC-Options:          -Wall
-  Exposed-Modules:      UrlPath
-                        UrlPath.Types
+  Exposed-Modules:      Data.Url
+                        Data.Url.Types
   Build-Depends:        base >= 4 && < 5
                       , mtl
                       , transformers
+                      , monoid-subclasses
 
 Test-Suite spec
   Type:                 exitcode-stdio-1.0

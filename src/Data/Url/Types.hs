@@ -1,15 +1,19 @@
-{-# LANGUAGE GADTs #-}
-{-# LANGUAGE BangPatterns #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE DeriveFunctor #-}
+{-# LANGUAGE
+    GADTs
+  , BangPatterns
+  , OverloadedStrings
+  , FlexibleContexts
+  , FlexibleInstances
+  , MultiParamTypeClasses
+  , DeriveFunctor
+  , StandaloneDeriving
+  #-}
 
-module UrlPath.Types where
+module Data.Url.Types where
 
 import Data.String
 import Data.Monoid
+import Data.Monoid.Textual (TextualMonoid)
 import Data.Functor.Identity
 import Control.Applicative
 import Control.Monad
@@ -19,16 +23,15 @@ import Control.Monad.Reader.Class
 -- | Abstract data type for a Url - a "target" and GET parameters. We require @IsString@
 -- and @Monoid@ for generic construction, but rendering will require a monomorphic type.
 --
--- The type constructor is parameterized over it's underlying @IsString@ & 
+-- The type constructor is parameterized over it's underlying @IsString@ &
 -- @Monoid@ instance.
 data UrlString a where
-  UrlString :: ( IsString a
-               , Monoid a ) =>
+  UrlString :: ( TextualMonoid a ) =>
                a
             -> [(a, a)]
             -> UrlString a
 
--- | We can't provide a @Show@ instance for @UrlString@ because that would force 
+-- | We can't provide a @Show@ instance for @UrlString@ because that would force
 -- us to use @String@.
 showUrlString :: UrlString a
               -> a
@@ -39,8 +42,7 @@ showUrlString (UrlString !t ((!k,!v):xs)) =
 
 
 -- | Makes a @UrlString@ out of a raw target path and a GET parameter pair.
-(<?>) :: ( IsString a
-         , Monoid a ) =>
+(<?>) :: ( TextualMonoid a ) =>
          a      -- ^ Target string
       -> (a, a) -- ^ GET Parameter
       -> UrlString a
@@ -49,8 +51,7 @@ showUrlString (UrlString !t ((!k,!v):xs)) =
 infixl 9 <?>
 
 -- | Adds another GET parameter pair to a @UrlString@.
-(<&>) :: ( IsString a
-         , Monoid a ) =>
+(<&>) :: ( TextualMonoid a ) =>
          UrlString a -- ^ Old Url
       -> (a, a)      -- ^ Additional GET Parameter
       -> UrlString a
@@ -60,24 +61,21 @@ infixl 8 <&>
 
 
 -- | Render the Url String flatly - without anything prepended to the target.
-expandRelative :: ( IsString plain
-                  , Monoid plain ) =>
+expandRelative :: ( TextualMonoid plain ) =>
                   UrlString plain
                -> plain
 expandRelative = showUrlString
 
 -- | Render the Url String as grounded - prepended with a "root" @//@ character.
-expandGrounded :: ( IsString plain
-                  , Monoid plain ) =>
+expandGrounded :: ( TextualMonoid plain ) =>
                   UrlString plain
                -> plain
 expandGrounded !x = "/" <> showUrlString x
 
--- | Render the Url String as absolute - getting the root from a @MonadReader@ 
+-- | Render the Url String as absolute - getting the root from a @MonadReader@
 -- context.
 expandAbsolute :: ( MonadReader plain m
-                  , IsString plain
-                  , Monoid plain ) =>
+                  , TextualMonoid plain ) =>
                   UrlString plain
                -> m plain
 expandAbsolute !x = do
@@ -96,12 +94,11 @@ expandAbsolute !x = do
 -- >   url <- lift $ expandAbsoluteWith ("foo.php" <?> ("bar","baz")) host
 -- >   script_ [src_ url] ""
 -- >
--- > bar :: LT.Text 
+-- > bar :: LT.Text
 -- > bar = (runReader (runTextT foo)) $
 -- >   SiteConfig "example.com" "cdn.example.com"
 expandAbsoluteWith :: ( MonadReader a m
-                      , IsString plain
-                      , Monoid plain ) =>
+                      , TextualMonoid plain ) =>
                       UrlString plain
                    -> (a -> plain)
                    -> m plain
