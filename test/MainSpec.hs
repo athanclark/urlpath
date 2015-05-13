@@ -9,7 +9,7 @@ import Test.Hspec
 import Test.QuickCheck
 import Test.QuickCheck.Instances
 
-import UrlPath
+import Data.Url
 
 import qualified Data.Text as T
 
