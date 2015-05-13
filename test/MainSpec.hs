@@ -58,14 +58,14 @@ testPath pathRunner d host target keyval = do
                 Gro -> "/"
                 Abs -> host <> "/"
 
-  (pathRunner (url $ urlStringTail target keyval) host)
+  (pathRunner (queryUrl $ urlStringTail target keyval) host)
     === (rawRender host' target keyval)
 
   where
     urlStringTail :: ( TextualMonoid a
-                     ) => a -> [(a,a)] -> UrlString a
+                     ) => a -> [(a,a)] -> QueryString a
 
-    urlStringTail t [] = UrlString t []
+    urlStringTail t [] = QueryString t [] Nothing
     urlStringTail t [kv] = t <?> kv
     urlStringTail t (kv:kvs) =
       foldl (<&>) (t <?> kv) kvs
