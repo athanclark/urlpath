@@ -19,7 +19,7 @@ import Control.Monad.Reader
 
 -- * Classes
 
-class Url b (m :: * -> *) where
+class MonadUrl b (m :: * -> *) where
   pathUrl   :: Path b t
             -> m String
   locUrl    :: Location b t
@@ -28,10 +28,10 @@ class Url b (m :: * -> *) where
                ) => s
                  -> m String
 
-instance ( Url b m
+instance ( MonadUrl b m
          , MonadTrans t
          , Monad m
-         ) => Url b (t m) where
+         ) => MonadUrl b (t m) where
   pathUrl   = lift . pathUrl
   locUrl    = lift . locUrl
   symbolUrl = lift . symbolUrl
@@ -109,7 +109,7 @@ instance MonadIO m => MonadIO (RelativeUrlT m) where
   liftIO = lift . liftIO
 
 instance ( Applicative m
-         ) => Url Rel (RelativeUrlT m) where
+         ) => MonadUrl Rel (RelativeUrlT m) where
   pathUrl x   = pure (toFilePath x)
   locUrl x    = pure (show x)
   symbolUrl x = pure (show (toLocation x))
@@ -150,7 +150,7 @@ instance MonadIO m => MonadIO (GroundedUrlT m) where
   liftIO = lift . liftIO
 
 instance ( Applicative m
-         ) => Url Abs (GroundedUrlT m) where
+         ) => MonadUrl Abs (GroundedUrlT m) where
   pathUrl x   = pure (toFilePath x)
   locUrl x    = pure (show x)
   symbolUrl x = pure (show (toLocation x))
@@ -191,7 +191,7 @@ instance MonadIO m => MonadIO (AbsoluteUrlT m) where
   liftIO = lift . liftIO
 
 instance ( Applicative m
-         ) => Url Abs (AbsoluteUrlT m) where
+         ) => MonadUrl Abs (AbsoluteUrlT m) where
   pathUrl x   = AbsoluteUrlT (\h -> pure $ show h ++ toFilePath x)
   locUrl x    = AbsoluteUrlT (\h -> pure $ show h ++ show x)
   symbolUrl x = AbsoluteUrlT (\h -> pure $ show h ++ show (toLocation x))
