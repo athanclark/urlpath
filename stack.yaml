@@ -1,0 +1,6 @@
+flags: {}
+packages:
+- '.'
+extra-deps:
+  - path-extra-0.0.1
+resolver: nightly-2015-10-01

@@ -1,82 +1,201 @@
 {-# LANGUAGE
-    OverloadedStrings
+    KindSignatures
   , MultiParamTypeClasses
-  , FlexibleInstances
-  , FlexibleContexts
-  , KindSignatures
-  , InstanceSigs
+  , FunctionalDependencies
   , TypeFamilies
-  , RankNTypes
+  , TypeSynonymInstances
+  , FlexibleInstances
+  , DeriveFunctor
   #-}
 
-module Data.Url
-    ( UrlReader (..)
-    , Url (..)
-    , module Data.Url.Types ) where
+module Data.Url where
 
-import Data.Url.Types
+import Path.Extended
 
-import Data.String
-import Data.Monoid
-import Data.Monoid.Textual (TextualMonoid)
-import Control.Applicative
-import Control.Monad
+import Data.Functor.Identity
 import Control.Monad.Trans
-import Control.Monad.Reader.Class
+import Control.Monad.Reader
+
 
 -- * Classes
 
--- | @Url@ is a relationship between an underlying string type
--- @plain@, and a deployment context @m@. We try to make the deployment style
--- coercible at the top level - if the expression has a type
--- @Url String (AbsoluteUrlT String Identity)@ or
--- @Monad m => Url T.Text (GroundedUrlT LT.Text m)@ will force
--- /all use-cases within the expression/ to coerce to that type.
-class ( TextualMonoid plain
-      , MonadReader plain m
-      ) => Url plain (m :: * -> *) where
-  queryUrl :: QueryString plain -- ^ Url type, parameterized over a string type @plain@
-           -> m plain           -- ^ Rendered Url in some context.
-  plainUrl :: plain   -- ^ raw small string
-           -> m plain -- ^ Rendered string in some context.
+class Url b (m :: * -> *) where
+  pathUrl   :: Path b t
+            -> m String
+  locUrl    :: Location b t
+            -> m String
+  symbolUrl :: ( ToLocation s b t
+               ) => s
+                 -> m String
+
+instance ( Url b m
+         , MonadTrans t
+         , Monad m
+         ) => Url b (t m) where
+  pathUrl   = lift . pathUrl
+  locUrl    = lift . locUrl
+  symbolUrl = lift . symbolUrl
 
 
--- | Overload deployment schemes with this - then, all that's needed is a type
--- coercion to change deployment.
-class Url plain m => UrlReader plain m where
-  type Result m :: * -> *
-  runUrlReader :: Url plain m =>
-                  m b -- ^ MonadReader with index @string@ and result @b@
-               -> plain -- ^ Reader index
-               -> Result m b -- ^ Final result
+-- | Make an instance for your own stringless route type to use your symbols
+-- instead of strings or @Path@.
+class ToLocation a b t | a -> b t where
+  toLocation :: a -> Location b t
+
+-- | Overload extraction for deployment transformers.
+class UrlReader m where
+  type RunUrlReader m :: * -> *
+  runUrlReader :: m a -- ^ MonadReader with index @string@ and result @b@
+               -> UrlAuthority -- ^ URI Scheme, hostname, and other details
+               -> RunUrlReader m a -- ^ Final result
 
 
+-- * Types
+
+-- | The hostname of a URL.
+data UrlAuthority = UrlAuthority
+  { urlScheme  :: String
+  , urlSlashes :: Bool
+  , urlAuth    :: Maybe UrlAuthent
+  , urlHost    :: String
+  , urlPort    :: Maybe Int
+  } deriving (Eq, Ord)
+
+instance Show UrlAuthority where
+  show (UrlAuthority sh sl ma h mp) =
+      sh ++ ":"
+   ++ if sl then "//" else ""
+   ++ maybe "" (\a -> show a ++ "@") ma
+   ++ h
+   ++ maybe "" (\p -> ":" ++ show p) mp
+
+data UrlAuthent = UrlAuthent
+  { urlAuthUser :: String
+  , urlAuthPass :: Maybe String
+  } deriving (Eq, Ord)
+
+instance Show UrlAuthent where
+  show (UrlAuthent u mp) = u ++ maybe "" (\p -> ":" ++ p) mp
+
+
+-- ** Relative Urls
+
+newtype RelativeUrlT m a = RelativeUrlT
+  { runRelativeUrlT :: UrlAuthority -> m a
+  } deriving Functor
+
+type RelativeUrl = RelativeUrlT Identity
+
+instance Applicative m => Applicative (RelativeUrlT m) where
+  pure x = RelativeUrlT $ const (pure x)
+  f <*> x = RelativeUrlT $ \r ->
+    (runRelativeUrlT f r) <*> (runRelativeUrlT x r)
+
+instance Monad m => Monad (RelativeUrlT m) where
+  return x = RelativeUrlT $ const (return x)
+  m >>= f = RelativeUrlT $ \r ->
+    runRelativeUrlT m r >>= (\x -> runRelativeUrlT (f x) r)
+
+instance MonadTrans RelativeUrlT where
+  lift = RelativeUrlT . const
+
+-- | Returns the base that urls are appended to - @mempty@
 instance ( Monad m
-         , TextualMonoid plain ) => Url plain (RelativeUrlT plain m) where
-  queryUrl = RelativeUrlT . const . return . expandRelative
-  plainUrl x = RelativeUrlT $ const $ return $ expandRelative $ QueryString x [] Nothing
+         ) => MonadReader String (RelativeUrlT m) where
+  ask = return ""
+  local _ x = x
 
-instance ( Monad m
-         , TextualMonoid plain ) => UrlReader plain (RelativeUrlT plain m) where
-  type Result (RelativeUrlT plain m) = m
+instance MonadIO m => MonadIO (RelativeUrlT m) where
+  liftIO = lift . liftIO
+
+instance ( Applicative m
+         ) => Url Rel (RelativeUrlT m) where
+  pathUrl x   = pure (toFilePath x)
+  locUrl x    = pure (show x)
+  symbolUrl x = pure (show (toLocation x))
+
+instance UrlReader (RelativeUrlT m) where
+  type RunUrlReader (RelativeUrlT m) = m
   runUrlReader = runRelativeUrlT
 
-instance ( Monad m
-         , TextualMonoid plain ) => Url plain (GroundedUrlT plain m) where
-  queryUrl = GroundedUrlT . const . return . expandGrounded
-  plainUrl x = GroundedUrlT $ const $ return $ expandGrounded $ QueryString x [] Nothing
 
+-- ** Grounded Urls
+
+newtype GroundedUrlT m a = GroundedUrlT
+  { runGroundedUrlT :: UrlAuthority -> m a
+  } deriving Functor
+
+type GroundedUrl = GroundedUrlT Identity
+
+instance Applicative m => Applicative (GroundedUrlT m) where
+  pure x = GroundedUrlT $ const (pure x)
+  f <*> x = GroundedUrlT $ \r ->
+    (runGroundedUrlT f r) <*> (runGroundedUrlT x r)
+
+instance Monad m => Monad (GroundedUrlT m) where
+  return x = GroundedUrlT $ const (return x)
+  m >>= f = GroundedUrlT $ \r ->
+    runGroundedUrlT m r >>= (\x -> runGroundedUrlT (f x) r)
+
+instance MonadTrans GroundedUrlT where
+  lift = GroundedUrlT . const
+
+-- | Returns the base that urls are appended to - @/@
 instance ( Monad m
-         , TextualMonoid plain ) => UrlReader plain (GroundedUrlT plain m) where
-  type Result (GroundedUrlT plain m) = m
+         ) => MonadReader String (GroundedUrlT m) where
+  ask = return "/"
+  local _ x = x
+
+instance MonadIO m => MonadIO (GroundedUrlT m) where
+  liftIO = lift . liftIO
+
+instance ( Applicative m
+         ) => Url Abs (GroundedUrlT m) where
+  pathUrl x   = pure (toFilePath x)
+  locUrl x    = pure (show x)
+  symbolUrl x = pure (show (toLocation x))
+
+instance UrlReader (GroundedUrlT m) where
+  type RunUrlReader (GroundedUrlT m) = m
   runUrlReader = runGroundedUrlT
 
-instance ( Monad m
-         , TextualMonoid plain ) => Url plain (AbsoluteUrlT plain m) where
-  queryUrl = expandAbsolute
-  plainUrl x = expandAbsolute $ QueryString x [] Nothing
 
+-- ** Absolute Urls
+
+newtype AbsoluteUrlT m a = AbsoluteUrlT
+  { runAbsoluteUrlT :: UrlAuthority -> m a
+  } deriving Functor
+
+type AbsoluteUrl = AbsoluteUrlT Identity
+
+instance Applicative m => Applicative (AbsoluteUrlT m) where
+  pure x = AbsoluteUrlT $ const (pure x)
+  f <*> x = AbsoluteUrlT $ \r ->
+    (runAbsoluteUrlT f r) <*> (runAbsoluteUrlT x r)
+
+instance Monad m => Monad (AbsoluteUrlT m) where
+  return x = AbsoluteUrlT $ const (return x)
+  m >>= f = AbsoluteUrlT $ \r ->
+    runAbsoluteUrlT m r >>= (\x -> runAbsoluteUrlT (f x) r)
+
+instance MonadTrans AbsoluteUrlT where
+  lift = AbsoluteUrlT . const
+
+-- | Returns the base that urls are appended to - the host
 instance ( Monad m
-         , TextualMonoid plain ) => UrlReader plain (AbsoluteUrlT plain m) where
-  type Result (AbsoluteUrlT plain m) = m
+         ) => MonadReader UrlAuthority (AbsoluteUrlT m) where
+  ask = AbsoluteUrlT return
+  local f (AbsoluteUrlT g) = AbsoluteUrlT (g . f)
+
+instance MonadIO m => MonadIO (AbsoluteUrlT m) where
+  liftIO = lift . liftIO
+
+instance ( Applicative m
+         ) => Url Abs (AbsoluteUrlT m) where
+  pathUrl x   = AbsoluteUrlT (\h -> pure $ show h ++ toFilePath x)
+  locUrl x    = AbsoluteUrlT (\h -> pure $ show h ++ show x)
+  symbolUrl x = AbsoluteUrlT (\h -> pure $ show h ++ show (toLocation x))
+
+instance UrlReader (AbsoluteUrlT m) where
+  type RunUrlReader (AbsoluteUrlT m) = m
   runUrlReader = runAbsoluteUrlT
