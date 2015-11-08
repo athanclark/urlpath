@@ -1,11 +1,12 @@
 {-# LANGUAGE
-    KindSignatures
+    TypeFamilies
+  , DeriveFunctor
+  , KindSignatures
+  , FlexibleInstances
+  , TypeSynonymInstances
+  , UndecidableInstances
   , MultiParamTypeClasses
   , FunctionalDependencies
-  , TypeFamilies
-  , TypeSynonymInstances
-  , FlexibleInstances
-  , DeriveFunctor
   #-}
 
 module Data.Url where
@@ -14,6 +15,9 @@ import Path.Extended
 
 import Data.Functor.Identity
 import Control.Monad.Trans
+import Control.Monad.Reader
+import Control.Monad.Writer
+import Control.Monad.State
 
 
 -- * Classes
@@ -111,6 +115,25 @@ instance UrlReader (RelativeUrlT m) where
   type RunUrlReader (RelativeUrlT m) = m
   runUrlReader = runRelativeUrlT
 
+instance ( MonadReader r m
+         ) => MonadReader r (RelativeUrlT m) where
+  ask       = lift ask
+  local f (RelativeUrlT x) = RelativeUrlT $ \r ->
+    local f (x r)
+
+instance ( MonadWriter w m
+         ) => MonadWriter w (RelativeUrlT m) where
+  tell w = lift (tell w)
+  listen (RelativeUrlT x) = RelativeUrlT $ \r ->
+    listen (x r)
+  pass (RelativeUrlT x) = RelativeUrlT $ \r ->
+    pass (x r)
+
+instance ( MonadState s m
+         ) => MonadState s (RelativeUrlT m) where
+  get   = lift get
+  put x = lift (put x)
+
 
 -- ** Grounded Urls
 
@@ -146,6 +169,25 @@ instance UrlReader (GroundedUrlT m) where
   type RunUrlReader (GroundedUrlT m) = m
   runUrlReader = runGroundedUrlT
 
+instance ( MonadReader r m
+         ) => MonadReader r (GroundedUrlT m) where
+  ask       = lift ask
+  local f (GroundedUrlT x) = GroundedUrlT $ \r ->
+    local f (x r)
+
+instance ( MonadWriter w m
+         ) => MonadWriter w (GroundedUrlT m) where
+  tell w = lift (tell w)
+  listen (GroundedUrlT x) = GroundedUrlT $ \r ->
+    listen (x r)
+  pass (GroundedUrlT x) = GroundedUrlT $ \r ->
+    pass (x r)
+
+instance ( MonadState s m
+         ) => MonadState s (GroundedUrlT m) where
+  get   = lift get
+  put x = lift (put x)
+
 
 -- ** Absolute Urls
 
@@ -180,3 +222,22 @@ instance ( Applicative m
 instance UrlReader (AbsoluteUrlT m) where
   type RunUrlReader (AbsoluteUrlT m) = m
   runUrlReader = runAbsoluteUrlT
+
+instance ( MonadReader r m
+         ) => MonadReader r (AbsoluteUrlT m) where
+  ask       = lift ask
+  local f (AbsoluteUrlT x) = AbsoluteUrlT $ \r ->
+    local f (x r)
+
+instance ( MonadWriter w m
+         ) => MonadWriter w (AbsoluteUrlT m) where
+  tell w = lift (tell w)
+  listen (AbsoluteUrlT x) = AbsoluteUrlT $ \r ->
+    listen (x r)
+  pass (AbsoluteUrlT x) = AbsoluteUrlT $ \r ->
+    pass (x r)
+
+instance ( MonadState s m
+         ) => MonadState s (AbsoluteUrlT m) where
+  get   = lift get
+  put x = lift (put x)
