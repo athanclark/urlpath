@@ -14,7 +14,6 @@ import Path.Extended
 
 import Data.Functor.Identity
 import Control.Monad.Trans
-import Control.Monad.Reader
 
 
 -- * Classes
@@ -99,12 +98,6 @@ instance Monad m => Monad (RelativeUrlT m) where
 instance MonadTrans RelativeUrlT where
   lift = RelativeUrlT . const
 
--- | Returns the base that urls are appended to - @mempty@
-instance ( Monad m
-         ) => MonadReader String (RelativeUrlT m) where
-  ask = return ""
-  local _ x = x
-
 instance MonadIO m => MonadIO (RelativeUrlT m) where
   liftIO = lift . liftIO
 
@@ -140,12 +133,6 @@ instance Monad m => Monad (GroundedUrlT m) where
 instance MonadTrans GroundedUrlT where
   lift = GroundedUrlT . const
 
--- | Returns the base that urls are appended to - @/@
-instance ( Monad m
-         ) => MonadReader String (GroundedUrlT m) where
-  ask = return "/"
-  local _ x = x
-
 instance MonadIO m => MonadIO (GroundedUrlT m) where
   liftIO = lift . liftIO
 
@@ -180,12 +167,6 @@ instance Monad m => Monad (AbsoluteUrlT m) where
 
 instance MonadTrans AbsoluteUrlT where
   lift = AbsoluteUrlT . const
-
--- | Returns the base that urls are appended to - the host
-instance ( Monad m
-         ) => MonadReader UrlAuthority (AbsoluteUrlT m) where
-  ask = AbsoluteUrlT return
-  local f (AbsoluteUrlT g) = AbsoluteUrlT (g . f)
 
 instance MonadIO m => MonadIO (AbsoluteUrlT m) where
   liftIO = lift . liftIO
