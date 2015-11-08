@@ -18,6 +18,7 @@ Library
   Exposed-Modules:      Data.Url
   Build-Depends:        base >= 4.8 && < 5
                       , exceptions
+                      , mmorph
                       , monad-control
                       , monad-logger
                       , mtl

@@ -29,6 +29,8 @@ import Control.Monad.State
 import Control.Monad.RWS
 import Control.Monad.Logger
 import Control.Monad.Trans.Resource
+import Control.Monad.Morph
+
 
 
 -- * Classes
@@ -288,6 +290,14 @@ instance ( MonadResource m
          ) => MonadResource (RelativeUrlT m) where
   liftResourceT = lift . liftResourceT
 
+instance MFunctor RelativeUrlT where
+  hoist f (RelativeUrlT x) = RelativeUrlT $ \r ->
+    f (x r)
+
+instance MMonad RelativeUrlT where
+  embed f x = RelativeUrlT $ \r ->
+    runRelativeUrlT (f (runRelativeUrlT x r)) r
+
 
 -- ** Grounded Urls
 
@@ -398,6 +408,14 @@ instance ( MonadResource m
          ) => MonadResource (GroundedUrlT m) where
   liftResourceT = lift . liftResourceT
 
+instance MFunctor GroundedUrlT where
+  hoist f (GroundedUrlT x) = GroundedUrlT $ \r ->
+    f (x r)
+
+instance MMonad GroundedUrlT where
+  embed f x = GroundedUrlT $ \r ->
+    runGroundedUrlT (f (runGroundedUrlT x r)) r
+
 
 -- ** Absolute Urls
 
@@ -507,3 +525,11 @@ instance ( MonadLogger m
 instance ( MonadResource m
          ) => MonadResource (AbsoluteUrlT m) where
   liftResourceT = lift . liftResourceT
+
+instance MFunctor AbsoluteUrlT where
+  hoist f (AbsoluteUrlT x) = AbsoluteUrlT $ \r ->
+    f (x r)
+
+instance MMonad AbsoluteUrlT where
+  embed f x = AbsoluteUrlT $ \r ->
+    runAbsoluteUrlT (f (runAbsoluteUrlT x r)) r
