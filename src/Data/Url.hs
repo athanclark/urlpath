@@ -164,11 +164,10 @@ class ToLocation a b t | a -> b t where
   toLocation :: MonadThrow m => a -> m (Location b t)
 
 -- | Overload extraction for deployment transformers.
-class UrlReader m where
-  type RunUrlReader m :: * -> *
-  runUrlReader :: m a -- ^ MonadReader with index @string@ and result @b@
+class UrlReader (t :: (* -> *) -> * -> *) where
+  runUrlReader :: t m a -- ^ MonadReader with index @string@ and result @b@
                -> UrlAuthority -- ^ URI Scheme, hostname, and other details
-               -> RunUrlReader m a -- ^ Final result
+               -> m a -- ^ Final result
 
 
 -- * Types
@@ -229,8 +228,7 @@ instance ( Applicative m
   locUrl x    = pure (show x)
   symbolUrl x = show <$> toLocation x
 
-instance UrlReader (RelativeUrlT m) where
-  type RunUrlReader (RelativeUrlT m) = m
+instance UrlReader RelativeUrlT where
   runUrlReader = runRelativeUrlT
 
 instance ( MonadReader r m
@@ -348,8 +346,7 @@ instance ( Applicative m
   locUrl x    = pure (show x)
   symbolUrl x = show <$> toLocation x
 
-instance UrlReader (GroundedUrlT m) where
-  type RunUrlReader (GroundedUrlT m) = m
+instance UrlReader GroundedUrlT where
   runUrlReader = runGroundedUrlT
 
 instance ( MonadReader r m
@@ -469,8 +466,7 @@ instance ( Applicative m
     x' <- toLocation x
     return $ show h ++ show x'
 
-instance UrlReader (AbsoluteUrlT m) where
-  type RunUrlReader (AbsoluteUrlT m) = m
+instance UrlReader AbsoluteUrlT where
   runUrlReader = runAbsoluteUrlT
 
 instance ( MonadReader r m
