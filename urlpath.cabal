@@ -1,5 +1,5 @@
 Name:                   urlpath
-Version:                3.2.0
+Version:                3.2.1
 Author:                 Athan Clark <athan.clark@gmail.com>
 Maintainer:             Athan Clark <athan.clark@gmail.com>
 License:                MIT
@@ -17,8 +17,12 @@ Library
   GHC-Options:          -Wall
   Exposed-Modules:      Data.Url
   Build-Depends:        base >= 4.8 && < 5
+                      , exceptions
+                      , monad-control
+                      , monad-logger
                       , mtl
                       , path-extra
+                      , transformers-base
 
 Source-Repository head
   Type:                 git

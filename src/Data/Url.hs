@@ -14,10 +14,16 @@ module Data.Url where
 import Path.Extended
 
 import Data.Functor.Identity
-import Control.Monad.Trans
+import Control.Monad.Base
+import Control.Monad.Catch
+import Control.Monad.Cont
+import Control.Monad.Except
+import Control.Monad.Trans.Control
 import Control.Monad.Reader
 import Control.Monad.Writer
 import Control.Monad.State
+import Control.Monad.RWS
+import Control.Monad.Logger
 
 
 -- * Classes
@@ -134,6 +140,58 @@ instance ( MonadState s m
   get   = lift get
   put x = lift (put x)
 
+instance ( MonadRWS r w s m
+         ) => MonadRWS r w s (RelativeUrlT m) where
+
+instance ( MonadCont m
+         ) => MonadCont (RelativeUrlT m) where
+  callCC f = RelativeUrlT $ \r ->
+    callCC $ \c -> runRelativeUrlT (f (RelativeUrlT . const . c)) r
+
+instance ( MonadError e m
+         ) => MonadError e (RelativeUrlT m) where
+  throwError = lift . throwError
+  catchError (RelativeUrlT x) f = RelativeUrlT $ \r ->
+    catchError (x r) (flip runRelativeUrlT r . f)
+
+instance ( MonadBase b m
+         ) => MonadBase b (RelativeUrlT m) where
+  liftBase = liftBaseDefault
+
+instance MonadTransControl RelativeUrlT where
+  type StT RelativeUrlT a = a
+  liftWith f = RelativeUrlT $ \r ->
+    f $ \t -> runRelativeUrlT t r
+  restoreT = RelativeUrlT . const
+
+instance ( MonadBaseControl b m
+         ) => MonadBaseControl b (RelativeUrlT m) where
+  type StM (RelativeUrlT m) a = ComposeSt RelativeUrlT m a
+  liftBaseWith = defaultLiftBaseWith
+  restoreM = defaultRestoreM
+
+instance ( MonadThrow m
+         ) => MonadThrow (RelativeUrlT m) where
+  throwM = lift . throwM
+
+instance ( MonadCatch m
+         ) => MonadCatch (RelativeUrlT m) where
+  catch (RelativeUrlT x) f = RelativeUrlT $ \r ->
+    catch (x r) (flip runRelativeUrlT r . f)
+
+instance ( MonadMask m
+         ) => MonadMask (RelativeUrlT m) where
+  mask a = RelativeUrlT $ \r ->
+    mask $ \u -> runRelativeUrlT (a $ q u) r
+    where q u (RelativeUrlT x) = RelativeUrlT (u . x)
+  uninterruptibleMask a = RelativeUrlT $ \r ->
+    uninterruptibleMask $ \u -> runRelativeUrlT (a $ q u) r
+    where q u (RelativeUrlT x) = RelativeUrlT (u . x)
+
+instance ( MonadLogger m
+         ) => MonadLogger (RelativeUrlT m) where
+  monadLoggerLog a b c d = lift (monadLoggerLog a b c d)
+
 
 -- ** Grounded Urls
 
@@ -188,6 +246,58 @@ instance ( MonadState s m
   get   = lift get
   put x = lift (put x)
 
+instance ( MonadRWS r w s m
+         ) => MonadRWS r w s (GroundedUrlT m) where
+
+instance ( MonadCont m
+         ) => MonadCont (GroundedUrlT m) where
+  callCC f = GroundedUrlT $ \r ->
+    callCC $ \c -> runGroundedUrlT (f (GroundedUrlT . const . c)) r
+
+instance ( MonadError e m
+         ) => MonadError e (GroundedUrlT m) where
+  throwError = lift . throwError
+  catchError (GroundedUrlT x) f = GroundedUrlT $ \r ->
+    catchError (x r) (flip runGroundedUrlT r . f)
+
+instance ( MonadBase b m
+         ) => MonadBase b (GroundedUrlT m) where
+  liftBase = liftBaseDefault
+
+instance MonadTransControl GroundedUrlT where
+  type StT GroundedUrlT a = a
+  liftWith f = GroundedUrlT $ \r ->
+    f $ \t -> runGroundedUrlT t r
+  restoreT = GroundedUrlT . const
+
+instance ( MonadBaseControl b m
+         ) => MonadBaseControl b (GroundedUrlT m) where
+  type StM (GroundedUrlT m) a = ComposeSt GroundedUrlT m a
+  liftBaseWith = defaultLiftBaseWith
+  restoreM = defaultRestoreM
+
+instance ( MonadThrow m
+         ) => MonadThrow (GroundedUrlT m) where
+  throwM = lift . throwM
+
+instance ( MonadCatch m
+         ) => MonadCatch (GroundedUrlT m) where
+  catch (GroundedUrlT x) f = GroundedUrlT $ \r ->
+    catch (x r) (flip runGroundedUrlT r . f)
+
+instance ( MonadMask m
+         ) => MonadMask (GroundedUrlT m) where
+  mask a = GroundedUrlT $ \r ->
+    mask $ \u -> runGroundedUrlT (a $ q u) r
+    where q u (GroundedUrlT x) = GroundedUrlT (u . x)
+  uninterruptibleMask a = GroundedUrlT $ \r ->
+    uninterruptibleMask $ \u -> runGroundedUrlT (a $ q u) r
+    where q u (GroundedUrlT x) = GroundedUrlT (u . x)
+
+instance ( MonadLogger m
+         ) => MonadLogger (GroundedUrlT m) where
+  monadLoggerLog a b c d = lift (monadLoggerLog a b c d)
+
 
 -- ** Absolute Urls
 
@@ -241,3 +351,55 @@ instance ( MonadState s m
          ) => MonadState s (AbsoluteUrlT m) where
   get   = lift get
   put x = lift (put x)
+
+instance ( MonadRWS r w s m
+         ) => MonadRWS r w s (AbsoluteUrlT m) where
+
+instance ( MonadCont m
+         ) => MonadCont (AbsoluteUrlT m) where
+  callCC f = AbsoluteUrlT $ \r ->
+    callCC $ \c -> runAbsoluteUrlT (f (AbsoluteUrlT . const . c)) r
+
+instance ( MonadError e m
+         ) => MonadError e (AbsoluteUrlT m) where
+  throwError = lift . throwError
+  catchError (AbsoluteUrlT x) f = AbsoluteUrlT $ \r ->
+    catchError (x r) (flip runAbsoluteUrlT r . f)
+
+instance ( MonadBase b m
+         ) => MonadBase b (AbsoluteUrlT m) where
+  liftBase = liftBaseDefault
+
+instance MonadTransControl AbsoluteUrlT where
+  type StT AbsoluteUrlT a = a
+  liftWith f = AbsoluteUrlT $ \r ->
+    f $ \t -> runAbsoluteUrlT t r
+  restoreT = AbsoluteUrlT . const
+
+instance ( MonadBaseControl b m
+         ) => MonadBaseControl b (AbsoluteUrlT m) where
+  type StM (AbsoluteUrlT m) a = ComposeSt AbsoluteUrlT m a
+  liftBaseWith = defaultLiftBaseWith
+  restoreM = defaultRestoreM
+
+instance ( MonadThrow m
+         ) => MonadThrow (AbsoluteUrlT m) where
+  throwM = lift . throwM
+
+instance ( MonadCatch m
+         ) => MonadCatch (AbsoluteUrlT m) where
+  catch (AbsoluteUrlT x) f = AbsoluteUrlT $ \r ->
+    catch (x r) (flip runAbsoluteUrlT r . f)
+
+instance ( MonadMask m
+         ) => MonadMask (AbsoluteUrlT m) where
+  mask a = AbsoluteUrlT $ \r ->
+    mask $ \u -> runAbsoluteUrlT (a $ q u) r
+    where q u (AbsoluteUrlT x) = AbsoluteUrlT (u . x)
+  uninterruptibleMask a = AbsoluteUrlT $ \r ->
+    uninterruptibleMask $ \u -> runAbsoluteUrlT (a $ q u) r
+    where q u (AbsoluteUrlT x) = AbsoluteUrlT (u . x)
+
+instance ( MonadLogger m
+         ) => MonadLogger (AbsoluteUrlT m) where
+  monadLoggerLog a b c d = lift (monadLoggerLog a b c d)
