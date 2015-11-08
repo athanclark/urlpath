@@ -44,6 +44,11 @@ class MonadUrl b (m :: * -> *) where
                ) => s
                  -> m String
 
+instance MonadUrl b IO where
+  pathUrl   = pure . toFilePath
+  locUrl    = pure . show
+  symbolUrl = pure . show . toLocation
+
 instance ( MonadUrl b m
          , Monad m
          ) => MonadUrl b (MaybeT m) where
