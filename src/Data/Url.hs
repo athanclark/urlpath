@@ -35,7 +35,7 @@ import Control.Monad.Morph
 
 -- * Classes
 
-class MonadUrl b (m :: * -> *) where
+class MonadThrow m => MonadUrl b (m :: * -> *) where
   pathUrl   :: Path b t
             -> m String
   locUrl    :: Location b t
@@ -223,6 +223,7 @@ instance MonadIO m => MonadIO (RelativeUrlT m) where
   liftIO = lift . liftIO
 
 instance ( Applicative m
+         , MonadThrow m
          ) => MonadUrl Rel (RelativeUrlT m) where
   pathUrl x   = pure (toFilePath x)
   locUrl x    = pure (show x)
