@@ -22,6 +22,8 @@ Library
                       , monad-logger
                       , mtl
                       , path-extra
+                      , resourcet
+                      , transformers
                       , transformers-base
 
 Source-Repository head

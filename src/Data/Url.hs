@@ -17,13 +17,18 @@ import Data.Functor.Identity
 import Control.Monad.Base
 import Control.Monad.Catch
 import Control.Monad.Cont
+import Control.Monad.Error
 import Control.Monad.Except
 import Control.Monad.Trans.Control
+import Control.Monad.Trans.Identity
+import Control.Monad.Trans.Maybe
+import Control.Monad.List
 import Control.Monad.Reader
 import Control.Monad.Writer
 import Control.Monad.State
 import Control.Monad.RWS
 import Control.Monad.Logger
+import Control.Monad.Trans.Resource
 
 
 -- * Classes
@@ -38,9 +43,96 @@ class MonadUrl b (m :: * -> *) where
                  -> m String
 
 instance ( MonadUrl b m
-         , MonadTrans t
          , Monad m
-         ) => MonadUrl b (t m) where
+         ) => MonadUrl b (MaybeT m) where
+  pathUrl   = lift . pathUrl
+  locUrl    = lift . locUrl
+  symbolUrl = lift . symbolUrl
+
+instance ( MonadUrl b m
+         , Monad m
+         ) => MonadUrl b (ListT m) where
+  pathUrl   = lift . pathUrl
+  locUrl    = lift . locUrl
+  symbolUrl = lift . symbolUrl
+
+instance ( MonadUrl b m
+         , Monad m
+         ) => MonadUrl b (ResourceT m) where
+  pathUrl   = lift . pathUrl
+  locUrl    = lift . locUrl
+  symbolUrl = lift . symbolUrl
+
+instance ( MonadUrl b m
+         , Monad m
+         ) => MonadUrl b (IdentityT m) where
+  pathUrl   = lift . pathUrl
+  locUrl    = lift . locUrl
+  symbolUrl = lift . symbolUrl
+
+instance ( MonadUrl b m
+         , Monad m
+         ) => MonadUrl b (LoggingT m) where
+  pathUrl   = lift . pathUrl
+  locUrl    = lift . locUrl
+  symbolUrl = lift . symbolUrl
+
+instance ( MonadUrl b m
+         , Monad m
+         ) => MonadUrl b (NoLoggingT m) where
+  pathUrl   = lift . pathUrl
+  locUrl    = lift . locUrl
+  symbolUrl = lift . symbolUrl
+
+
+instance ( MonadUrl b m
+         , Monad m
+         ) => MonadUrl b (ReaderT r m) where
+  pathUrl   = lift . pathUrl
+  locUrl    = lift . locUrl
+  symbolUrl = lift . symbolUrl
+
+instance ( MonadUrl b m
+         , Monad m
+         , Monoid w
+         ) => MonadUrl b (WriterT w m) where
+  pathUrl   = lift . pathUrl
+  locUrl    = lift . locUrl
+  symbolUrl = lift . symbolUrl
+
+instance ( MonadUrl b m
+         , Monad m
+         ) => MonadUrl b (StateT s m) where
+  pathUrl   = lift . pathUrl
+  locUrl    = lift . locUrl
+  symbolUrl = lift . symbolUrl
+
+instance ( MonadUrl b m
+         , Monad m
+         , Error e
+         ) => MonadUrl b (ErrorT e m) where
+  pathUrl   = lift . pathUrl
+  locUrl    = lift . locUrl
+  symbolUrl = lift . symbolUrl
+
+instance ( MonadUrl b m
+         , Monad m
+         ) => MonadUrl b (ContT r m) where
+  pathUrl   = lift . pathUrl
+  locUrl    = lift . locUrl
+  symbolUrl = lift . symbolUrl
+
+instance ( MonadUrl b m
+         , Monad m
+         ) => MonadUrl b (ExceptT e m) where
+  pathUrl   = lift . pathUrl
+  locUrl    = lift . locUrl
+  symbolUrl = lift . symbolUrl
+
+instance ( MonadUrl b m
+         , Monad m
+         , Monoid w
+         ) => MonadUrl b (RWST r w s m) where
   pathUrl   = lift . pathUrl
   locUrl    = lift . locUrl
   symbolUrl = lift . symbolUrl
@@ -192,6 +284,10 @@ instance ( MonadLogger m
          ) => MonadLogger (RelativeUrlT m) where
   monadLoggerLog a b c d = lift (monadLoggerLog a b c d)
 
+instance ( MonadResource m
+         ) => MonadResource (RelativeUrlT m) where
+  liftResourceT = lift . liftResourceT
+
 
 -- ** Grounded Urls
 
@@ -298,6 +394,10 @@ instance ( MonadLogger m
          ) => MonadLogger (GroundedUrlT m) where
   monadLoggerLog a b c d = lift (monadLoggerLog a b c d)
 
+instance ( MonadResource m
+         ) => MonadResource (GroundedUrlT m) where
+  liftResourceT = lift . liftResourceT
+
 
 -- ** Absolute Urls
 
@@ -403,3 +503,7 @@ instance ( MonadMask m
 instance ( MonadLogger m
          ) => MonadLogger (AbsoluteUrlT m) where
   monadLoggerLog a b c d = lift (monadLoggerLog a b c d)
+
+instance ( MonadResource m
+         ) => MonadResource (AbsoluteUrlT m) where
+  liftResourceT = lift . liftResourceT
