@@ -35,139 +35,103 @@ import Control.Monad.Morph
 
 -- * Classes
 
-class MonadThrow m => MonadUrl b (m :: * -> *) where
-  pathUrl   :: Path b t
+class MonadUrl base type' (m :: * -> *) where
+  pathUrl   :: Path base type'
             -> m String
-  locUrl    :: Location b t
+  locUrl    :: Location base type'
             -> m String
-  symbolUrl :: ( ToLocation s b t
-               , MonadThrow m
-               ) => s -> m String
 
-instance MonadUrl b IO where
+instance MonadUrl b t IO where
   pathUrl   = pure . toFilePath
   locUrl    = pure . show
-  symbolUrl x = show <$> toLocation x
 
-instance ( MonadUrl b m
+instance ( MonadUrl b t m
          , Monad m
-         , MonadThrow m
-         ) => MonadUrl b (MaybeT m) where
+         ) => MonadUrl b t (MaybeT m) where
   pathUrl   = lift . pathUrl
   locUrl    = lift . locUrl
-  symbolUrl = symbolUrl
 
-instance ( MonadUrl b m
+instance ( MonadUrl b t m
          , Monad m
-         , MonadThrow m
-         ) => MonadUrl b (ListT m) where
+         ) => MonadUrl b t (ListT m) where
   pathUrl   = lift . pathUrl
   locUrl    = lift . locUrl
-  symbolUrl = symbolUrl
 
-instance ( MonadUrl b m
+instance ( MonadUrl b t m
          , Monad m
-         , MonadThrow m
-         ) => MonadUrl b (ResourceT m) where
+         ) => MonadUrl b t (ResourceT m) where
   pathUrl   = lift . pathUrl
   locUrl    = lift . locUrl
-  symbolUrl = symbolUrl
 
-instance ( MonadUrl b m
+instance ( MonadUrl b t m
          , Monad m
-         , MonadThrow m
-         ) => MonadUrl b (IdentityT m) where
+         ) => MonadUrl b t (IdentityT m) where
   pathUrl   = lift . pathUrl
   locUrl    = lift . locUrl
-  symbolUrl = symbolUrl
 
-instance ( MonadUrl b m
+instance ( MonadUrl b t m
          , Monad m
-         , MonadThrow m
-         ) => MonadUrl b (LoggingT m) where
+         ) => MonadUrl b t (LoggingT m) where
   pathUrl   = lift . pathUrl
   locUrl    = lift . locUrl
-  symbolUrl = symbolUrl
 
-instance ( MonadUrl b m
+instance ( MonadUrl b t m
          , Monad m
-         , MonadThrow m
-         ) => MonadUrl b (NoLoggingT m) where
+         ) => MonadUrl b t (NoLoggingT m) where
   pathUrl   = lift . pathUrl
   locUrl    = lift . locUrl
-  symbolUrl = symbolUrl
 
 
-instance ( MonadUrl b m
+instance ( MonadUrl b t m
          , Monad m
-         , MonadThrow m
-         ) => MonadUrl b (ReaderT r m) where
+         ) => MonadUrl b t (ReaderT r m) where
   pathUrl   = lift . pathUrl
   locUrl    = lift . locUrl
-  symbolUrl = symbolUrl
 
-instance ( MonadUrl b m
+instance ( MonadUrl b t m
          , Monad m
-         , MonadThrow m
          , Monoid w
-         ) => MonadUrl b (WriterT w m) where
+         ) => MonadUrl b t (WriterT w m) where
   pathUrl   = lift . pathUrl
   locUrl    = lift . locUrl
-  symbolUrl = symbolUrl
 
-instance ( MonadUrl b m
+instance ( MonadUrl b t m
          , Monad m
-         , MonadThrow m
-         ) => MonadUrl b (StateT s m) where
+         ) => MonadUrl b t (StateT s m) where
   pathUrl   = lift . pathUrl
   locUrl    = lift . locUrl
-  symbolUrl = symbolUrl
 
-instance ( MonadUrl b m
+instance ( MonadUrl b t m
          , Monad m
-         , MonadThrow m
          , Error e
-         ) => MonadUrl b (ErrorT e m) where
+         ) => MonadUrl b t (ErrorT e m) where
   pathUrl   = lift . pathUrl
   locUrl    = lift . locUrl
-  symbolUrl = symbolUrl
 
-instance ( MonadUrl b m
+instance ( MonadUrl b t m
          , Monad m
-         , MonadThrow m
-         ) => MonadUrl b (ContT r m) where
+         ) => MonadUrl b t (ContT r m) where
   pathUrl   = lift . pathUrl
   locUrl    = lift . locUrl
-  symbolUrl = symbolUrl
 
-instance ( MonadUrl b m
+instance ( MonadUrl b t m
          , Monad m
-         , MonadThrow m
-         ) => MonadUrl b (ExceptT e m) where
+         ) => MonadUrl b t (ExceptT e m) where
   pathUrl   = lift . pathUrl
   locUrl    = lift . locUrl
-  symbolUrl = symbolUrl
 
-instance ( MonadUrl b m
+instance ( MonadUrl b t m
          , Monad m
-         , MonadThrow m
          , Monoid w
-         ) => MonadUrl b (RWST r w s m) where
+         ) => MonadUrl b t (RWST r w s m) where
   pathUrl   = lift . pathUrl
   locUrl    = lift . locUrl
-  symbolUrl = symbolUrl
 
 
 -- | Make an instance for your own stringless route type to use your symbols
 -- instead of strings or @Path@.
-class ToLocation a b t | a -> b t where
-  toLocation :: MonadThrow m => a -> m (Location b t)
-
--- | Overload extraction for deployment transformers.
-class UrlReader (t :: (* -> *) -> * -> *) where
-  runUrlReader :: t m a -- ^ MonadReader with index @string@ and result @b@
-               -> UrlAuthority -- ^ URI Scheme, hostname, and other details
-               -> m a -- ^ Final result
+class ToLocation sym base type' where
+  toLocation :: MonadThrow m => sym -> m (Location base type')
 
 
 -- * Types
@@ -179,23 +143,24 @@ data UrlAuthority = UrlAuthority
   , urlAuth    :: Maybe UrlAuthent
   , urlHost    :: String
   , urlPort    :: Maybe Int
-  } deriving (Eq, Ord)
+  } deriving (Show, Eq, Ord)
 
-instance Show UrlAuthority where
-  show (UrlAuthority sh sl ma h mp) =
+showUrlAuthority :: UrlAuthority -> String
+showUrlAuthority (UrlAuthority sh sl ma h mp) =
       sh ++ ":"
-   ++ if sl then "//" else ""
-   ++ maybe "" (\a -> show a ++ "@") ma
+   ++ (if sl then "//" else "")
+   ++ (maybe "" (\a -> showUrlAuthent a ++ "@") ma)
    ++ h
-   ++ maybe "" (\p -> ":" ++ show p) mp
+   ++ (maybe "" (\p -> ":" ++ show p) mp)
 
 data UrlAuthent = UrlAuthent
   { urlAuthUser :: String
   , urlAuthPass :: Maybe String
-  } deriving (Eq, Ord)
+  } deriving (Show, Eq, Ord)
 
-instance Show UrlAuthent where
-  show (UrlAuthent u mp) = u ++ maybe "" (\p -> ":" ++ p) mp
+showUrlAuthent :: UrlAuthent -> String
+showUrlAuthent (UrlAuthent u mp) =
+  u ++ (maybe "" (\p -> ":" ++ p) mp)
 
 
 -- ** Relative Urls
@@ -205,6 +170,16 @@ newtype RelativeUrlT m a = RelativeUrlT
   } deriving Functor
 
 type RelativeUrl = RelativeUrlT Identity
+
+instance ( Applicative m
+         ) => MonadUrl Rel File (RelativeUrlT m) where
+  pathUrl x   = pure (toFilePath x)
+  locUrl x    = pure (show x)
+
+instance ( Applicative m
+         ) => MonadUrl Rel Dir (RelativeUrlT m) where
+  pathUrl x   = pure (toFilePath x)
+  locUrl x    = pure (show x)
 
 instance Applicative m => Applicative (RelativeUrlT m) where
   pure x = RelativeUrlT $ const (pure x)
@@ -221,16 +196,6 @@ instance MonadTrans RelativeUrlT where
 
 instance MonadIO m => MonadIO (RelativeUrlT m) where
   liftIO = lift . liftIO
-
-instance ( Applicative m
-         , MonadThrow m
-         ) => MonadUrl Rel (RelativeUrlT m) where
-  pathUrl x   = pure (toFilePath x)
-  locUrl x    = pure (show x)
-  symbolUrl x = show <$> toLocation x
-
-instance UrlReader RelativeUrlT where
-  runUrlReader = runRelativeUrlT
 
 instance ( MonadReader r m
          ) => MonadReader r (RelativeUrlT m) where
@@ -324,6 +289,16 @@ newtype GroundedUrlT m a = GroundedUrlT
 
 type GroundedUrl = GroundedUrlT Identity
 
+instance ( Applicative m
+         ) => MonadUrl Abs File (GroundedUrlT m) where
+  pathUrl x   = pure (toFilePath x)
+  locUrl x    = pure (show x)
+
+instance ( Applicative m
+         ) => MonadUrl Abs Dir (GroundedUrlT m) where
+  pathUrl x   = pure (toFilePath x)
+  locUrl x    = pure (show x)
+
 instance Applicative m => Applicative (GroundedUrlT m) where
   pure x = GroundedUrlT $ const (pure x)
   f <*> x = GroundedUrlT $ \r ->
@@ -339,16 +314,6 @@ instance MonadTrans GroundedUrlT where
 
 instance MonadIO m => MonadIO (GroundedUrlT m) where
   liftIO = lift . liftIO
-
-instance ( Applicative m
-         , MonadThrow m
-         ) => MonadUrl Abs (GroundedUrlT m) where
-  pathUrl x   = pure (toFilePath x)
-  locUrl x    = pure (show x)
-  symbolUrl x = show <$> toLocation x
-
-instance UrlReader GroundedUrlT where
-  runUrlReader = runGroundedUrlT
 
 instance ( MonadReader r m
          ) => MonadReader r (GroundedUrlT m) where
@@ -442,6 +407,11 @@ newtype AbsoluteUrlT m a = AbsoluteUrlT
 
 type AbsoluteUrl = AbsoluteUrlT Identity
 
+instance ( Applicative m
+         ) => MonadUrl Abs File (AbsoluteUrlT m) where
+  pathUrl x   = AbsoluteUrlT (\h -> pure $ showUrlAuthority h ++ toFilePath x)
+  locUrl x    = AbsoluteUrlT (\h -> pure $ showUrlAuthority h ++ show x)
+
 instance Applicative m => Applicative (AbsoluteUrlT m) where
   pure x = AbsoluteUrlT $ const (pure x)
   f <*> x = AbsoluteUrlT $ \r ->
@@ -457,18 +427,6 @@ instance MonadTrans AbsoluteUrlT where
 
 instance MonadIO m => MonadIO (AbsoluteUrlT m) where
   liftIO = lift . liftIO
-
-instance ( Applicative m
-         , MonadThrow m
-         ) => MonadUrl Abs (AbsoluteUrlT m) where
-  pathUrl x   = AbsoluteUrlT (\h -> pure $ show h ++ toFilePath x)
-  locUrl x    = AbsoluteUrlT (\h -> pure $ show h ++ show x)
-  symbolUrl x = AbsoluteUrlT $ \h -> do
-    x' <- toLocation x
-    return $ show h ++ show x'
-
-instance UrlReader AbsoluteUrlT where
-  runUrlReader = runAbsoluteUrlT
 
 instance ( MonadReader r m
          ) => MonadReader r (AbsoluteUrlT m) where

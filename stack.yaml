@@ -1,6 +1,12 @@
 flags: {}
 packages:
 - '.'
+- location:
+    git: https://github.com/athanclark/path-extra
+    commit: 89cc61e3ef117b025cc4a0c39a339111e63ec48f
+  extra-dep: true
+
+
 extra-deps:
-  - path-extra-0.0.1
+  - path-extra-0.0.2
 resolver: nightly-2015-10-01
