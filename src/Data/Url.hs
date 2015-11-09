@@ -6,7 +6,6 @@
   , TypeSynonymInstances
   , UndecidableInstances
   , MultiParamTypeClasses
-  , FunctionalDependencies
   #-}
 
 module Data.Url where
@@ -149,9 +148,9 @@ showUrlAuthority :: UrlAuthority -> String
 showUrlAuthority (UrlAuthority sh sl ma h mp) =
       sh ++ ":"
    ++ (if sl then "//" else "")
-   ++ (maybe "" (\a -> showUrlAuthent a ++ "@") ma)
+   ++ maybe "" (\a -> showUrlAuthent a ++ "@") ma
    ++ h
-   ++ (maybe "" (\p -> ":" ++ show p) mp)
+   ++ maybe "" (\p -> ":" ++ show p) mp
 
 data UrlAuthent = UrlAuthent
   { urlAuthUser :: String
@@ -160,7 +159,7 @@ data UrlAuthent = UrlAuthent
 
 showUrlAuthent :: UrlAuthent -> String
 showUrlAuthent (UrlAuthent u mp) =
-  u ++ (maybe "" (\p -> ":" ++ p) mp)
+  u ++ maybe "" (\p -> ":" ++ p) mp
 
 
 -- ** Relative Urls
@@ -184,7 +183,7 @@ instance ( Applicative m
 instance Applicative m => Applicative (RelativeUrlT m) where
   pure x = RelativeUrlT $ const (pure x)
   f <*> x = RelativeUrlT $ \r ->
-    (runRelativeUrlT f r) <*> (runRelativeUrlT x r)
+    runRelativeUrlT f r <*> runRelativeUrlT x r
 
 instance Monad m => Monad (RelativeUrlT m) where
   return x = RelativeUrlT $ const (return x)
@@ -302,7 +301,7 @@ instance ( Applicative m
 instance Applicative m => Applicative (GroundedUrlT m) where
   pure x = GroundedUrlT $ const (pure x)
   f <*> x = GroundedUrlT $ \r ->
-    (runGroundedUrlT f r) <*> (runGroundedUrlT x r)
+    runGroundedUrlT f r <*> runGroundedUrlT x r
 
 instance Monad m => Monad (GroundedUrlT m) where
   return x = GroundedUrlT $ const (return x)
@@ -415,7 +414,7 @@ instance ( Applicative m
 instance Applicative m => Applicative (AbsoluteUrlT m) where
   pure x = AbsoluteUrlT $ const (pure x)
   f <*> x = AbsoluteUrlT $ \r ->
-    (runAbsoluteUrlT f r) <*> (runAbsoluteUrlT x r)
+    runAbsoluteUrlT f r <*> runAbsoluteUrlT x r
 
 instance Monad m => Monad (AbsoluteUrlT m) where
   return x = AbsoluteUrlT $ const (return x)
