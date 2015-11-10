@@ -34,6 +34,9 @@ import Control.Monad.Morph
 
 -- * Classes
 
+-- | Turns a @Path@ or @Location@ into a @String@, where the rendering behavior
+-- (relative, grounded and absolute) is encoded in the monad you use, much like
+-- @LoggingT@ and @NoLoggingT@ from <https://hackage.haskell.org/package/monad-logger monad-logger>.
 class MonadUrl base type' (m :: * -> *) where
   pathUrl   :: Path base type'
             -> m String
@@ -127,8 +130,8 @@ instance ( MonadUrl b t m
   locUrl    = lift . locUrl
 
 
--- | Make an instance for your own stringless route type to use your symbols
--- instead of strings or @Path@.
+-- | Convenience typeclass for symbolic, stringless routes - make an instance
+-- for your own data type to use your constructors as route-referencing symbols.
 class ToLocation sym base type' where
   toLocation :: MonadThrow m => sym -> m (Location base type')
 
