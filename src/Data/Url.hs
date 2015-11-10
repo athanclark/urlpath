@@ -414,6 +414,11 @@ instance ( Applicative m
   pathUrl x   = AbsoluteUrlT (\h -> pure $ showUrlAuthority h ++ toFilePath x)
   locUrl x    = AbsoluteUrlT (\h -> pure $ showUrlAuthority h ++ show x)
 
+instance ( Applicative m
+         ) => MonadUrl Abs Dir (AbsoluteUrlT m) where
+  pathUrl x   = AbsoluteUrlT (\h -> pure $ showUrlAuthority h ++ toFilePath x)
+  locUrl x    = AbsoluteUrlT (\h -> pure $ showUrlAuthority h ++ show x)
+
 instance Applicative m => Applicative (AbsoluteUrlT m) where
   pure x = AbsoluteUrlT $ const (pure x)
   f <*> x = AbsoluteUrlT $ \r ->
