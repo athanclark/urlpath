@@ -6,6 +6,7 @@
   , TypeSynonymInstances
   , UndecidableInstances
   , MultiParamTypeClasses
+  , FunctionalDependencies
   #-}
 
 module Data.Url where
@@ -132,7 +133,7 @@ instance ( MonadUrl b t m
 
 -- | Convenience typeclass for symbolic, stringless routes - make an instance
 -- for your own data type to use your constructors as route-referencing symbols.
-class ToLocation sym base type' where
+class ToLocation sym base type' | sym -> base type' where
   toLocation :: MonadThrow m => sym -> m (Location base type')
 
 
