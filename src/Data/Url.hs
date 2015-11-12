@@ -151,12 +151,6 @@ instance ( MonadUrl b t m
   locUrl    = lift . locUrl
 
 
--- | Convenience typeclass for symbolic, stringless routes - make an instance
--- for your own data type to use your constructors as route-referencing symbols.
-class ToLocation sym base type' | sym -> base type' where
-  toLocation :: MonadThrow m => sym -> m (Location base type')
-
-
 -- * Types
 
 -- | The hostname of a URL.

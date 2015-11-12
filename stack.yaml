@@ -3,7 +3,7 @@ packages:
 - '.'
 - location:
     git: https://github.com/athanclark/path-extra
-    commit: 89cc61e3ef117b025cc4a0c39a339111e63ec48f
+    commit: 5e510a949c5bcd79ac662b622a371c3403ffc474
   extra-dep: true
 
 
