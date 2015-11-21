@@ -292,6 +292,10 @@ instance Applicative m => Applicative (AbsoluteUrlT m) where
   f <*> x = AbsoluteUrlT $ \r ->
     runAbsoluteUrlT f r <*> runAbsoluteUrlT x r
 
+instance Alternative m => Alternative (AbsoluteUrlT m) where
+  empty = AbsoluteUrlT (\_ -> empty)
+  (AbsoluteUrlT f) <|> (AbsoluteUrlT g) = AbsoluteUrlT $ \h -> f h <|> g h
+
 instance Monad m => Monad (AbsoluteUrlT m) where
   return x = AbsoluteUrlT $ const (return x)
   m >>= f = AbsoluteUrlT $ \r ->
