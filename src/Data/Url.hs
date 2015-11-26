@@ -7,7 +7,6 @@
   , TypeSynonymInstances
   , UndecidableInstances
   , MultiParamTypeClasses
-  , FunctionalDependencies
   , GeneralizedNewtypeDeriving
   #-}
 
@@ -199,7 +198,7 @@ instance MonadTrans RelativeUrlT where
 
 instance MonadTransControl RelativeUrlT where
   type StT RelativeUrlT a = a
-  liftWith f = RelativeUrlT (f (\t -> runRelativeUrlT t))
+  liftWith f = RelativeUrlT (f runRelativeUrlT)
   restoreT = RelativeUrlT
 
 instance ( MonadBaseControl b m
@@ -244,7 +243,7 @@ instance MonadTrans GroundedUrlT where
 
 instance MonadTransControl GroundedUrlT where
   type StT GroundedUrlT a = a
-  liftWith f = GroundedUrlT (f (\t -> runGroundedUrlT t))
+  liftWith f = GroundedUrlT (f runGroundedUrlT)
   restoreT = GroundedUrlT
 
 instance ( MonadBaseControl b m
@@ -294,7 +293,7 @@ instance Applicative m => Applicative (AbsoluteUrlT m) where
     runAbsoluteUrlT f r <*> runAbsoluteUrlT x r
 
 instance Alternative m => Alternative (AbsoluteUrlT m) where
-  empty = AbsoluteUrlT (\_ -> empty)
+  empty = AbsoluteUrlT (const empty)
   (AbsoluteUrlT f) <|> (AbsoluteUrlT g) = AbsoluteUrlT $ \h -> f h <|> g h
 
 instance Monad m => Monad (AbsoluteUrlT m) where
