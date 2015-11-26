@@ -164,7 +164,8 @@ data UrlAuthority = UrlAuthority
 
 showUrlAuthority :: UrlAuthority -> String
 showUrlAuthority (UrlAuthority sh sl ma h mp) =
-      sh ++ ":"
+      sh
+   ++ ":"
    ++ (if sl then "//" else "")
    ++ maybe "" (\a -> showUrlAuthent a ++ "@") ma
    ++ h
