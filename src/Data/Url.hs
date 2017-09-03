@@ -2,6 +2,7 @@
     TypeFamilies
   , DeriveFunctor
   , KindSignatures
+  , OverloadedStrings
   , FlexibleInstances
   , StandaloneDeriving
   , TypeSynonymInstances
@@ -33,11 +34,19 @@ module Data.Url where
 import Path.Extended
 
 import Data.Functor.Identity
+import Data.URI (URI (..))
+import Data.URI.Auth (URIAuth (..))
+import Data.URI.Auth.Host (URIAuthHost (Localhost))
+import qualified Data.Strict.Maybe as Strict
+import qualified Data.Strict.Tuple as Strict
+import qualified Data.Vector as V
+import Data.List.Split (splitOn)
+import qualified Data.Text as T
 import Control.Applicative
 import Control.Monad.Base
 import Control.Monad.Catch
 import Control.Monad.Cont
-import Control.Monad.Error
+import Control.Monad.Trans.Error (Error, ErrorT)
 import Control.Monad.Except
 import Control.Monad.Trans.Control
 import Control.Monad.Trans.Identity
@@ -60,13 +69,13 @@ import Control.Monad.Morph
 -- @LoggingT@ and @NoLoggingT@ from <https://hackage.haskell.org/package/monad-logger monad-logger>.
 class MonadUrl base type' (m :: * -> *) where
   pathUrl   :: Path base type'
-            -> m String
+            -> m URI
   locUrl    :: Location base type'
-            -> m String
+            -> m URI
 
 instance MonadUrl b t IO where
-  pathUrl   = pure . toFilePath
-  locUrl    = pure . show
+  pathUrl x = pure (mkUriPathEmpty x)
+  locUrl  x = pure (mkUriLocEmpty x)
 
 instance ( MonadUrl b t m
          , Monad m
@@ -152,33 +161,6 @@ instance ( MonadUrl b t m
 
 -- * Types
 
--- | The hostname of a URL.
-data UrlAuthority = UrlAuthority
-  { urlScheme  :: String
-  , urlSlashes :: Bool
-  , urlAuth    :: Maybe UrlAuthent
-  , urlHost    :: String
-  , urlPort    :: Maybe Int
-  } deriving (Show, Eq, Ord)
-
-showUrlAuthority :: UrlAuthority -> String
-showUrlAuthority (UrlAuthority sh sl ma h mp) =
-      sh
-   ++ ":"
-   ++ (if sl then "//" else "")
-   ++ maybe "" (\a -> showUrlAuthent a ++ "@") ma
-   ++ h
-   ++ maybe "" (\p -> ":" ++ show p) mp
-
-data UrlAuthent = UrlAuthent
-  { urlAuthUser :: String
-  , urlAuthPass :: Maybe String
-  } deriving (Show, Eq, Ord)
-
-showUrlAuthent :: UrlAuthent -> String
-showUrlAuthent (UrlAuthent u mp) =
-  u ++ maybe "" (\p -> ":" ++ p) mp
-
 
 -- ** Relative Urls
 
@@ -216,13 +198,13 @@ instance MMonad RelativeUrlT where
 
 instance ( Applicative m
          ) => MonadUrl Rel File (RelativeUrlT m) where
-  pathUrl x   = pure (toFilePath x)
-  locUrl x    = pure (show x)
+  pathUrl x   = pure (mkUriPathEmpty x)
+  locUrl x    = pure (mkUriLocEmpty x)
 
 instance ( Applicative m
          ) => MonadUrl Rel Dir (RelativeUrlT m) where
-  pathUrl x   = pure (toFilePath x)
-  locUrl x    = pure (show x)
+  pathUrl x   = pure (mkUriPathEmpty x)
+  locUrl x    = pure (mkUriLocEmpty x)
 
 
 -- ** Grounded Urls
@@ -260,32 +242,32 @@ instance MMonad GroundedUrlT where
 
 instance ( Applicative m
          ) => MonadUrl Abs File (GroundedUrlT m) where
-  pathUrl x   = pure (toFilePath x)
-  locUrl x    = pure (show x)
+  pathUrl x   = pure (mkUriPathEmpty x)
+  locUrl x    = pure (mkUriLocEmpty x)
 
 instance ( Applicative m
          ) => MonadUrl Abs Dir (GroundedUrlT m) where
-  pathUrl x   = pure (toFilePath x)
-  locUrl x    = pure (show x)
+  pathUrl x   = pure (mkUriPathEmpty x)
+  locUrl x    = pure (mkUriLocEmpty x)
 
 
 -- ** Absolute Urls
 
 newtype AbsoluteUrlT m a = AbsoluteUrlT
-  { runAbsoluteUrlT :: UrlAuthority -> m a
+  { runAbsoluteUrlT :: URIAuth -> m a
   } deriving Functor
 
 type AbsoluteUrl = AbsoluteUrlT Identity
 
 instance ( Applicative m
          ) => MonadUrl Abs File (AbsoluteUrlT m) where
-  pathUrl x   = AbsoluteUrlT (\h -> pure $ showUrlAuthority h ++ toFilePath x)
-  locUrl x    = AbsoluteUrlT (\h -> pure $ showUrlAuthority h ++ show x)
+  pathUrl x   = AbsoluteUrlT (\h -> pure $ mkUriPath h x)
+  locUrl x    = AbsoluteUrlT (\h -> pure $ mkUriLoc h x)
 
 instance ( Applicative m
          ) => MonadUrl Abs Dir (AbsoluteUrlT m) where
-  pathUrl x   = AbsoluteUrlT (\h -> pure $ showUrlAuthority h ++ toFilePath x)
-  locUrl x    = AbsoluteUrlT (\h -> pure $ showUrlAuthority h ++ show x)
+  pathUrl x   = AbsoluteUrlT (\h -> pure $ mkUriPath h x)
+  locUrl x    = AbsoluteUrlT (\h -> pure $ mkUriLoc h x)
 
 instance Applicative m => Applicative (AbsoluteUrlT m) where
   pure x = AbsoluteUrlT $ const (pure x)
@@ -389,3 +371,43 @@ instance MFunctor AbsoluteUrlT where
 instance MMonad AbsoluteUrlT where
   embed f x = AbsoluteUrlT $ \r ->
     runAbsoluteUrlT (f (runAbsoluteUrlT x r)) r
+
+mkUriPath :: URIAuth -> Path base type' -> URI
+mkUriPath auth path = URI (Strict.Just "https")
+                     True
+                     auth
+                     (V.fromList $ fmap T.pack $ splitOn "/" $ toFilePath path)
+                     V.empty
+                     Strict.Nothing
+
+mkUriPathEmpty :: Path base type' -> URI
+mkUriPathEmpty path = URI Strict.Nothing
+                     False
+                     (URIAuth Strict.Nothing Localhost Strict.Nothing)
+                     (V.fromList $ fmap T.pack $ splitOn "/" $ toFilePath path)
+                     V.empty
+                     Strict.Nothing
+
+mkUriLoc :: URIAuth -> Location base type' -> URI
+mkUriLoc auth loc = URI (Strict.Just "https")
+                   True
+                   auth
+                   (V.fromList $ fmap T.pack $ splitOn "/" $ toFilePath $ locPath loc)
+                   ( V.fromList $ map (\(l,r) ->
+                       (T.pack l) Strict.:!:
+                            (maybe Strict.Nothing (Strict.Just . T.pack) r))
+                       (getQuery loc)
+                   )
+                   (maybe Strict.Nothing (Strict.Just . T.pack) (getFragment loc))
+
+mkUriLocEmpty :: Location base type' -> URI
+mkUriLocEmpty loc = URI Strict.Nothing
+                   False
+                   (URIAuth Strict.Nothing Localhost Strict.Nothing)
+                   (V.fromList $ fmap T.pack $ splitOn "/" $ toFilePath $ locPath loc)
+                   ( V.fromList $ map (\(l,r) ->
+                       (T.pack l) Strict.:!:
+                            (maybe Strict.Nothing (Strict.Just . T.pack) r))
+                       (getQuery loc)
+                   )
+                   (maybe Strict.Nothing (Strict.Just . T.pack) (getFragment loc))
