@@ -34,6 +34,7 @@ module Data.Url where
 import Path.Extended
 
 import Data.Functor.Identity
+import Data.Functor.Compose
 import Data.URI (URI (..))
 import Data.URI.Auth (URIAuth (..))
 import Data.URI.Auth.Host (URIAuthHost (Localhost))
@@ -49,6 +50,7 @@ import Control.Monad.Cont
 import Control.Monad.Trans.Error (Error, ErrorT)
 import Control.Monad.Except
 import Control.Monad.Trans.Control
+import qualified Control.Monad.Trans.Control.Aligned as Aligned
 import Control.Monad.Trans.Identity
 import Control.Monad.Trans.Maybe
 import Control.Monad.List
@@ -183,11 +185,20 @@ instance MonadTransControl RelativeUrlT where
   liftWith f = RelativeUrlT (f runRelativeUrlT)
   restoreT = RelativeUrlT
 
+instance Aligned.MonadTransControl RelativeUrlT Identity where
+  liftWith f = RelativeUrlT (f (\x -> Identity <$> runRelativeUrlT x))
+  restoreT x = RelativeUrlT (runIdentity <$> x)
+
 instance ( MonadBaseControl b m
          ) => MonadBaseControl b (RelativeUrlT m) where
   type StM (RelativeUrlT m) a = ComposeSt RelativeUrlT m a
   liftBaseWith = defaultLiftBaseWith
   restoreM = defaultRestoreM
+
+instance ( Aligned.MonadBaseControl b m stM
+         ) => Aligned.MonadBaseControl b (RelativeUrlT m) (Compose stM Identity) where
+  liftBaseWith = Aligned.defaultLiftBaseWith
+  restoreM = Aligned.defaultRestoreM
 
 instance MFunctor RelativeUrlT where
   hoist f (RelativeUrlT x) = RelativeUrlT (f x)
@@ -228,11 +239,20 @@ instance MonadTransControl GroundedUrlT where
   liftWith f = GroundedUrlT (f runGroundedUrlT)
   restoreT = GroundedUrlT
 
+instance Aligned.MonadTransControl GroundedUrlT Identity where
+  liftWith f = GroundedUrlT (f (\x -> Identity <$> runGroundedUrlT x))
+  restoreT x = GroundedUrlT (runIdentity <$> x)
+
 instance ( MonadBaseControl b m
          ) => MonadBaseControl b (GroundedUrlT m) where
   type StM (GroundedUrlT m) a = ComposeSt GroundedUrlT m a
   liftBaseWith = defaultLiftBaseWith
   restoreM = defaultRestoreM
+
+instance ( Aligned.MonadBaseControl b m stM
+         ) => Aligned.MonadBaseControl b (GroundedUrlT m) (Compose stM Identity) where
+  liftBaseWith = Aligned.defaultLiftBaseWith
+  restoreM = Aligned.defaultRestoreM
 
 instance MFunctor GroundedUrlT where
   hoist f (GroundedUrlT x) = GroundedUrlT (f x)
@@ -332,11 +352,21 @@ instance MonadTransControl AbsoluteUrlT where
     f $ \t -> runAbsoluteUrlT t r
   restoreT = AbsoluteUrlT . const
 
+instance Aligned.MonadTransControl AbsoluteUrlT Identity where
+  liftWith f = AbsoluteUrlT $ \r ->
+    f $ \x -> Identity <$> runAbsoluteUrlT x r
+  restoreT x = AbsoluteUrlT $ \_ -> runIdentity <$> x
+
 instance ( MonadBaseControl b m
          ) => MonadBaseControl b (AbsoluteUrlT m) where
   type StM (AbsoluteUrlT m) a = ComposeSt AbsoluteUrlT m a
   liftBaseWith = defaultLiftBaseWith
   restoreM = defaultRestoreM
+
+instance ( Aligned.MonadBaseControl b m stM
+         ) => Aligned.MonadBaseControl b (AbsoluteUrlT m) (Compose stM Identity) where
+  liftBaseWith = Aligned.defaultLiftBaseWith
+  restoreM = Aligned.defaultRestoreM
 
 instance ( MonadThrow m
          ) => MonadThrow (AbsoluteUrlT m) where
