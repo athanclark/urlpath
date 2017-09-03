@@ -392,7 +392,7 @@ mkUriLoc :: URIAuth -> Location base type' -> URI
 mkUriLoc auth loc = URI (Strict.Just "https")
                    True
                    auth
-                   (V.fromList $ fmap T.pack $ splitOn "/" $ toFilePath $ locPath loc)
+                   (V.fromList $ fmap T.pack $ splitOn "/" $ show loc)
                    ( V.fromList $ map (\(l,r) ->
                        (T.pack l) Strict.:!:
                             (maybe Strict.Nothing (Strict.Just . T.pack) r))
@@ -404,7 +404,7 @@ mkUriLocEmpty :: Location base type' -> URI
 mkUriLocEmpty loc = URI Strict.Nothing
                    False
                    (URIAuth Strict.Nothing Localhost Strict.Nothing)
-                   (V.fromList $ fmap T.pack $ splitOn "/" $ toFilePath $ locPath loc)
+                   (V.fromList $ fmap T.pack $ splitOn "/" $ show loc)
                    ( V.fromList $ map (\(l,r) ->
                        (T.pack l) Strict.:!:
                             (maybe Strict.Nothing (Strict.Just . T.pack) r))
