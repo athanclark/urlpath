@@ -1,5 +1,5 @@
 Name:                   urlpath
-Version:                6.0.3
+Version:                6.0.4
 Author:                 Athan Clark <athan.clark@gmail.com>
 Maintainer:             Athan Clark <athan.clark@gmail.com>
 License:                MIT
@@ -17,7 +17,7 @@ Library
   GHC-Options:          -Wall
   Exposed-Modules:      Data.Url
   Build-Depends:        base >= 4.8 && < 5
-                      , attoparsec-uri
+                      , attoparsec-uri >= 0.0.2
                       , exceptions
                       , mmorph
                       , monad-control
