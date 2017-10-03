@@ -274,20 +274,20 @@ instance ( Applicative m
 -- ** Absolute Urls
 
 newtype AbsoluteUrlT m a = AbsoluteUrlT
-  { runAbsoluteUrlT :: URIAuth -> m a
+  { runAbsoluteUrlT :: (Location Abs File -> URI) -> m a
   } deriving Functor
 
 type AbsoluteUrl = AbsoluteUrlT Identity
 
 instance ( Applicative m
          ) => MonadUrl Abs File (AbsoluteUrlT m) where
-  pathUrl x   = AbsoluteUrlT (\h -> pure $ mkUriPath h x)
-  locUrl x    = AbsoluteUrlT (\h -> pure $ mkUriLoc h x)
+  pathUrl x   = AbsoluteUrlT (\f -> pure (f (fromPath x)))
+  locUrl x    = AbsoluteUrlT (\f -> pure (f x))
 
-instance ( Applicative m
-         ) => MonadUrl Abs Dir (AbsoluteUrlT m) where
-  pathUrl x   = AbsoluteUrlT (\h -> pure $ mkUriPath h x)
-  locUrl x    = AbsoluteUrlT (\h -> pure $ mkUriLoc h x)
+-- instance ( Applicative m
+--          ) => MonadUrl Abs Dir (AbsoluteUrlT m) where
+--   pathUrl x   = AbsoluteUrlT (\f -> pure $ f x)
+--   locUrl x    = AbsoluteUrlT (\f -> pure $ f x)
 
 instance Applicative m => Applicative (AbsoluteUrlT m) where
   pure x = AbsoluteUrlT $ const (pure x)
@@ -402,13 +402,13 @@ instance MMonad AbsoluteUrlT where
   embed f x = AbsoluteUrlT $ \r ->
     runAbsoluteUrlT (f (runAbsoluteUrlT x r)) r
 
-mkUriPath :: URIAuth -> Path base type' -> URI
-mkUriPath auth path = URI (Strict.Just "https")
-                     True
-                     auth
-                     (V.fromList $ fmap T.pack $ splitOn "/" $ dropWhile (== '/') $ toFilePath path)
-                     V.empty
-                     Strict.Nothing
+-- mkUriPath :: URIAuth -> Path base type' -> URI
+-- mkUriPath auth path = URI (Strict.Just "https")
+--                      True
+--                      auth
+--                      (V.fromList $ fmap T.pack $ splitOn "/" $ dropWhile (== '/') $ toFilePath path)
+--                      V.empty
+--                      Strict.Nothing
 
 mkUriPathEmpty :: Path base type' -> URI
 mkUriPathEmpty path = URI Strict.Nothing
@@ -418,17 +418,17 @@ mkUriPathEmpty path = URI Strict.Nothing
                      V.empty
                      Strict.Nothing
 
-mkUriLoc :: URIAuth -> Location base type' -> URI
-mkUriLoc auth loc = URI (Strict.Just "https")
-                   True
-                   auth
-                   (V.fromList $ fmap T.pack $ splitOn "/" $ dropWhile (== '/') $ show loc)
-                   ( V.fromList $ map (\(l,r) ->
-                       (T.pack l) Strict.:!:
-                            (maybe Strict.Nothing (Strict.Just . T.pack) r))
-                       (getQuery loc)
-                   )
-                   (maybe Strict.Nothing (Strict.Just . T.pack) (getFragment loc))
+-- mkUriLoc :: URIAuth -> Location base type' -> URI
+-- mkUriLoc auth loc = URI (Strict.Just "https")
+--                    True
+--                    auth
+--                    (V.fromList $ fmap T.pack $ splitOn "/" $ dropWhile (== '/') $ show loc)
+--                    ( V.fromList $ map (\(l,r) ->
+--                        (T.pack l) Strict.:!:
+--                             (maybe Strict.Nothing (Strict.Just . T.pack) r))
+--                        (getQuery loc)
+--                    )
+--                    (maybe Strict.Nothing (Strict.Just . T.pack) (getFragment loc))
 
 mkUriLocEmpty :: Location base type' -> URI
 mkUriLocEmpty loc = URI Strict.Nothing
