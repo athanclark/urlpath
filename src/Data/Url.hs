@@ -413,12 +413,10 @@ mkUriLocEmpty = packLocation Strict.Nothing False (URIAuth Strict.Nothing Localh
 getPathChunks :: Path base type' -> V.Vector T.Text
 getPathChunks path = V.fromList $ fmap T.pack $ splitOn "/" $ dropWhile (== '/') (toFilePath path)
 
-getLocationChunks :: Location base type' -> V.Vector T.Text
-getLocationChunks loc = V.fromList $ fmap T.pack $ splitOn "/" $ dropWhile (== '/') (show loc)
-
 packLocation :: Strict.Maybe T.Text -> Bool -> URIAuth -> Location base type' -> URI
 packLocation scheme slashes auth loc =
-  URI scheme slashes auth (getLocationChunks loc)
+  URI scheme slashes auth
+    (getPathChunks $ locPath loc)
     ( V.fromList
         $ map (\(l,r) ->
             (T.pack l) Strict.:!:
