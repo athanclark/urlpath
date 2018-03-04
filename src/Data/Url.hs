@@ -421,42 +421,26 @@ instance MMonad AbsoluteUrlT where
   embed f x = AbsoluteUrlT $ \r ->
     runAbsoluteUrlT (f (runAbsoluteUrlT x r)) r
 
--- mkUriPath :: URIAuth -> Path base type' -> URI
--- mkUriPath auth path = URI (Strict.Just "https")
---                      True
---                      auth
---                      (V.fromList $ fmap T.pack $ splitOn "/" $ dropWhile (== '/') $ toFilePath path)
---                      V.empty
---                      Strict.Nothing
 
 mkUriPathEmpty :: Path base type' -> URI
-mkUriPathEmpty path = URI Strict.Nothing
-                     False
-                     (URIAuth Strict.Nothing Localhost Strict.Nothing)
-                     (V.fromList $ fmap T.pack $ splitOn "/" $ dropWhile (== '/') $ toFilePath path)
-                     V.empty
-                     Strict.Nothing
-
--- mkUriLoc :: URIAuth -> Location base type' -> URI
--- mkUriLoc auth loc = URI (Strict.Just "https")
---                    True
---                    auth
---                    (V.fromList $ fmap T.pack $ splitOn "/" $ dropWhile (== '/') $ show loc)
---                    ( V.fromList $ map (\(l,r) ->
---                        (T.pack l) Strict.:!:
---                             (maybe Strict.Nothing (Strict.Just . T.pack) r))
---                        (getQuery loc)
---                    )
---                    (maybe Strict.Nothing (Strict.Just . T.pack) (getFragment loc))
+mkUriPathEmpty path = URI Strict.Nothing False (URIAuth Strict.Nothing Localhost Strict.Nothing) (getPathChunks path) V.empty Strict.Nothing
 
 mkUriLocEmpty :: Location base type' -> URI
-mkUriLocEmpty loc = URI Strict.Nothing
-                   False
-                   (URIAuth Strict.Nothing Localhost Strict.Nothing)
-                   (V.fromList $ fmap T.pack $ splitOn "/" $ dropWhile (== '/') $ show loc)
-                   ( V.fromList $ map (\(l,r) ->
-                       (T.pack l) Strict.:!:
-                            (maybe Strict.Nothing (Strict.Just . T.pack) r))
-                       (getQuery loc)
-                   )
-                   (maybe Strict.Nothing (Strict.Just . T.pack) (getFragment loc))
+mkUriLocEmpty = packLocation Strict.Nothing False (URIAuth Strict.Nothing Localhost Strict.Nothing)
+
+
+getPathChunks :: Path base type' -> V.Vector T.Text
+getPathChunks path = V.fromList $ fmap T.pack $ splitOn "/" $ dropWhile (== '/') (toFilePath path)
+
+getLocationChunks :: Location base type' -> V.Vector T.Text
+getLocationChunks loc = V.fromList $ fmap T.pack $ splitOn "/" $ dropWhile (== '/') (show loc)
+
+packLocation :: Strict.Maybe T.Text -> Bool -> URIAuth -> Location base type' -> URI
+packLocation scheme slashes auth loc =
+  URI scheme slashes auth (getLocationChunks loc)
+    ( V.fromList $ map (\(l,r) ->
+        (T.pack l) Strict.:!:
+            (maybe Strict.Nothing (Strict.Just . T.pack) r))
+        (getQuery loc)
+    )
+    (maybe Strict.Nothing (Strict.Just . T.pack) (getFragment loc))
