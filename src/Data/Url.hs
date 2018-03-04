@@ -273,25 +273,6 @@ instance ( Applicative m
 
 -- ** Absolute Urls
 
-fromLocation :: Maybe T.Text -> Bool -> URIAuth -> Location Abs File -> URI
-fromLocation scheme slashes auth (Location _ path ext query frag) =
-  URI (case scheme of
-         Nothing -> Strict.Nothing
-         Just x -> Strict.Just x)
-    slashes
-    auth
-    (V.fromList $ T.splitOn "/" $ T.pack $ toFilePath path ++ case ext of
-        Nothing -> ""
-        Just x -> x)
-    (fmap (\(k,mv) -> (T.pack k) Strict.:!: (case mv of
-                                               Nothing -> Strict.Nothing
-                                               Just v -> Strict.Just (T.pack v)
-                                              )) $ V.fromList query)
-    (case frag of
-       Nothing -> Strict.Nothing
-       Just f -> Strict.Just (T.pack f))
-
-
 newtype AbsoluteUrlT m a = AbsoluteUrlT
   { runAbsoluteUrlT :: (Location Abs File -> URI) -> m a
   } deriving Functor
@@ -438,9 +419,10 @@ getLocationChunks loc = V.fromList $ fmap T.pack $ splitOn "/" $ dropWhile (== '
 packLocation :: Strict.Maybe T.Text -> Bool -> URIAuth -> Location base type' -> URI
 packLocation scheme slashes auth loc =
   URI scheme slashes auth (getLocationChunks loc)
-    ( V.fromList $ map (\(l,r) ->
-        (T.pack l) Strict.:!:
-            (maybe Strict.Nothing (Strict.Just . T.pack) r))
-        (getQuery loc)
+    ( V.fromList
+        $ map (\(l,r) ->
+            (T.pack l) Strict.:!:
+              (maybe Strict.Nothing (Strict.Just . T.pack) r))
+        $ getQuery loc
     )
     (maybe Strict.Nothing (Strict.Just . T.pack) (getFragment loc))
