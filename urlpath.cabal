@@ -17,7 +17,7 @@ Library
   GHC-Options:          -Wall
   Exposed-Modules:      Data.Url
   Build-Depends:        base >= 4.8 && < 5
-                      , attoparsec-uri >= 0.0.2
+                      , attoparsec-uri >= 0.0.4
                       , exceptions
                       , mmorph
                       , monad-control
