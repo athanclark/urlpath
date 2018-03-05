@@ -3,6 +3,7 @@
   , DeriveFunctor
   , KindSignatures
   , OverloadedStrings
+  , OverloadedLists
   , FlexibleInstances
   , StandaloneDeriving
   , TypeSynonymInstances
@@ -35,6 +36,7 @@ import Path.Extended
 
 import Data.Functor.Identity
 import Data.Functor.Compose
+import Data.Maybe (maybe)
 import Data.URI (URI (..))
 import Data.URI.Auth (URIAuth (..))
 import Data.URI.Auth.Host (URIAuthHost (Localhost))
@@ -413,10 +415,24 @@ mkUriLocEmpty = packLocation Strict.Nothing False (URIAuth Strict.Nothing Localh
 getPathChunks :: Path base type' -> V.Vector T.Text
 getPathChunks path = V.fromList $ fmap T.pack $ splitOn "/" $ dropWhile (== '/') (toFilePath path)
 
+
+
 packLocation :: Strict.Maybe T.Text -> Bool -> URIAuth -> Location base type' -> URI
 packLocation scheme slashes auth loc =
   URI scheme slashes auth
-    (getPathChunks $ locPath loc)
+    ( let unsnoc :: V.Vector a -> Maybe (V.Vector a, a)
+          unsnoc vs
+            | V.null vs = Nothing
+            | otherwise =
+                Just ( V.take (V.length vs - 1) vs
+                     , V.last vs
+                     )
+          fileExt :: T.Text
+          fileExt = maybe "" (("." <>) . T.pack) (locFileExt loc)
+      in  case unsnoc $ getPathChunks $ locPath loc of
+            Nothing -> [fileExt]
+            Just (xs,x) -> xs <> [x <> fileExt]
+    )
     ( V.fromList
         $ map (\(l,r) ->
             (T.pack l) Strict.:!:
