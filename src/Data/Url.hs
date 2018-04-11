@@ -32,7 +32,8 @@
 
 module Data.Url where
 
-import Path.Extended
+import Path (Path, Abs, Rel, File, Dir, parseAbsDir, parseRelFile, toFilePath)
+import Path.Extended (Location (..), fromPath, PathAppend ((</>)), (<&>), setFragment, getFragment, getQuery)
 
 import Data.Functor.Identity (Identity (..))
 import Data.Functor.Compose (Compose)

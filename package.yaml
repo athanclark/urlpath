@@ -1,5 +1,5 @@
 name:                urlpath
-version:             8.1.0
+version:             8.2.0
 github:              "athanclark/urlpath"
 license:             BSD3
 author:              "Athan Clark"
@@ -25,7 +25,8 @@ dependencies:
 - monad-control-aligned
 - monad-logger
 - mtl
-- path-extra >= 0.0.6
+- path
+- path-extra >= 0.1.2
 - resourcet
 - split
 - strict
