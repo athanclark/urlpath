@@ -4,6 +4,7 @@
   , KindSignatures
   , OverloadedStrings
   , OverloadedLists
+  , QuasiQuotes
   , FlexibleInstances
   , StandaloneDeriving
   , TypeSynonymInstances
@@ -32,8 +33,8 @@
 
 module Data.Url where
 
-import Path (Path, Abs, Rel, File, Dir, parseAbsDir, parseRelFile, toFilePath)
-import Path.Extended (Location (..), fromPath, PathAppend ((</>)), (<&>), setFragment, getFragment, getQuery)
+import Path (Path, Abs, File, Dir, parseAbsDir, parseRelFile, toFilePath, absdir, (</>))
+import Path.Extended (Location (..), fromAbsDir, fromAbsFile, (<&>), setFragment, getFragment, getQuery)
 
 import Data.Functor.Identity (Identity (..))
 import Data.Functor.Compose (Compose)
@@ -46,7 +47,6 @@ import qualified Data.Strict.Tuple as Strict
 import qualified Data.Vector as V
 import Data.List.Split (splitOn)
 import qualified Data.Text as T
-import Data.Monoid ((<>))
 import Control.Applicative (Alternative ((<|>), empty))
 import Control.Monad (MonadPlus ())
 import Control.Monad.Fix (MonadFix ())
@@ -79,96 +79,112 @@ import Unsafe.Coerce (unsafeCoerce)
 -- | Turns a @Path@ or @Location@ into a @String@, where the rendering behavior
 -- (relative, grounded and absolute) is encoded in the monad you use, much like
 -- @LoggingT@ and @NoLoggingT@ from <https://hackage.haskell.org/package/monad-logger monad-logger>.
-class MonadUrl base type' (m :: * -> *) where
-  pathUrl   :: Path base type'
-            -> m URI
-  locUrl    :: Location base type'
-            -> m URI
+class MonadUrl (m :: * -> *) where
+  absDirUrl  :: Path Abs Dir
+             -> m URI
+  absFileUrl :: Path Abs File
+             -> m URI
+  locUrl     :: Location
+             -> m URI
 
-instance MonadUrl b t IO where
-  pathUrl x = pure (mkUriPathEmpty x)
-  locUrl  x = pure (mkUriLocEmpty x)
+instance MonadUrl IO where
+  absDirUrl  = pure . mkUriLocEmpty . fromAbsDir
+  absFileUrl = pure . mkUriLocEmpty . fromAbsFile
+  locUrl     = pure . mkUriLocEmpty
 
-instance ( MonadUrl b t m
+instance ( MonadUrl m
          , Monad m
-         ) => MonadUrl b t (MaybeT m) where
-  pathUrl   = lift . pathUrl
-  locUrl    = lift . locUrl
+         ) => MonadUrl (MaybeT m) where
+  absDirUrl  = lift . absDirUrl
+  absFileUrl = lift . absFileUrl
+  locUrl     = lift . locUrl
 
-instance ( MonadUrl b t m
+instance ( MonadUrl m
          , Monad m
-         ) => MonadUrl b t (ListT m) where
-  pathUrl   = lift . pathUrl
-  locUrl    = lift . locUrl
+         ) => MonadUrl (ListT m) where
+  absDirUrl  = lift . absDirUrl
+  absFileUrl = lift . absFileUrl
+  locUrl     = lift . locUrl
 
-instance ( MonadUrl b t m
+instance ( MonadUrl m
          , Monad m
-         ) => MonadUrl b t (ResourceT m) where
-  pathUrl   = lift . pathUrl
-  locUrl    = lift . locUrl
+         ) => MonadUrl (ResourceT m) where
+  absDirUrl  = lift . absDirUrl
+  absFileUrl = lift . absFileUrl
+  locUrl     = lift . locUrl
 
-instance ( MonadUrl b t m
+instance ( MonadUrl m
          , Monad m
-         ) => MonadUrl b t (IdentityT m) where
-  pathUrl   = lift . pathUrl
-  locUrl    = lift . locUrl
+         ) => MonadUrl (IdentityT m) where
+  absDirUrl  = lift . absDirUrl
+  absFileUrl = lift . absFileUrl
+  locUrl     = lift . locUrl
 
-instance ( MonadUrl b t m
+instance ( MonadUrl m
          , Monad m
-         ) => MonadUrl b t (LoggingT m) where
-  pathUrl   = lift . pathUrl
-  locUrl    = lift . locUrl
+         ) => MonadUrl (LoggingT m) where
+  absDirUrl  = lift . absDirUrl
+  absFileUrl = lift . absFileUrl
+  locUrl     = lift . locUrl
 
-instance ( MonadUrl b t m
+instance ( MonadUrl m
          , Monad m
-         ) => MonadUrl b t (NoLoggingT m) where
-  pathUrl   = lift . pathUrl
-  locUrl    = lift . locUrl
+         ) => MonadUrl (NoLoggingT m) where
+  absDirUrl  = lift . absDirUrl
+  absFileUrl = lift . absFileUrl
+  locUrl     = lift . locUrl
 
-instance ( MonadUrl b t m
+instance ( MonadUrl m
          , Monad m
-         ) => MonadUrl b t (ReaderT r m) where
-  pathUrl   = lift . pathUrl
-  locUrl    = lift . locUrl
+         ) => MonadUrl (ReaderT r m) where
+  absDirUrl  = lift . absDirUrl
+  absFileUrl = lift . absFileUrl
+  locUrl     = lift . locUrl
 
-instance ( MonadUrl b t m
+instance ( MonadUrl m
          , Monad m
          , Monoid w
-         ) => MonadUrl b t (WriterT w m) where
-  pathUrl   = lift . pathUrl
-  locUrl    = lift . locUrl
+         ) => MonadUrl (WriterT w m) where
+  absDirUrl  = lift . absDirUrl
+  absFileUrl = lift . absFileUrl
+  locUrl     = lift . locUrl
 
-instance ( MonadUrl b t m
+instance ( MonadUrl m
          , Monad m
-         ) => MonadUrl b t (StateT s m) where
-  pathUrl   = lift . pathUrl
-  locUrl    = lift . locUrl
+         ) => MonadUrl (StateT s m) where
+  absDirUrl  = lift . absDirUrl
+  absFileUrl = lift . absFileUrl
+  locUrl     = lift . locUrl
 
-instance ( MonadUrl b t m
+instance ( MonadUrl m
          , Monad m
          , Error e
-         ) => MonadUrl b t (ErrorT e m) where
-  pathUrl   = lift . pathUrl
-  locUrl    = lift . locUrl
+         ) => MonadUrl (ErrorT e m) where
+  absDirUrl  = lift . absDirUrl
+  absFileUrl = lift . absFileUrl
+  locUrl     = lift . locUrl
 
-instance ( MonadUrl b t m
+instance ( MonadUrl m
          , Monad m
-         ) => MonadUrl b t (ContT r m) where
-  pathUrl   = lift . pathUrl
-  locUrl    = lift . locUrl
+         ) => MonadUrl (ContT r m) where
+  absDirUrl  = lift . absDirUrl
+  absFileUrl = lift . absFileUrl
+  locUrl     = lift . locUrl
 
-instance ( MonadUrl b t m
+instance ( MonadUrl m
          , Monad m
-         ) => MonadUrl b t (ExceptT e m) where
-  pathUrl   = lift . pathUrl
-  locUrl    = lift . locUrl
+         ) => MonadUrl (ExceptT e m) where
+  absDirUrl  = lift . absDirUrl
+  absFileUrl = lift . absFileUrl
+  locUrl     = lift . locUrl
 
-instance ( MonadUrl b t m
+instance ( MonadUrl m
          , Monad m
          , Monoid w
-         ) => MonadUrl b t (RWST r w s m) where
-  pathUrl   = lift . pathUrl
-  locUrl    = lift . locUrl
+         ) => MonadUrl (RWST r w s m) where
+  absDirUrl  = lift . absDirUrl
+  absFileUrl = lift . absFileUrl
+  locUrl     = lift . locUrl
 
 
 -- * Types
@@ -218,14 +234,10 @@ instance MMonad RelativeUrlT where
 
 
 instance ( Applicative m
-         ) => MonadUrl Rel File (RelativeUrlT m) where
-  pathUrl x   = pure (mkUriPathEmpty x)
-  locUrl x    = pure (mkUriLocEmpty x)
-
-instance ( Applicative m
-         ) => MonadUrl Rel Dir (RelativeUrlT m) where
-  pathUrl x   = pure (mkUriPathEmpty x)
-  locUrl x    = pure (mkUriLocEmpty x)
+         ) => MonadUrl (RelativeUrlT m) where
+  absDirUrl  = pure . mkUriLocEmpty . fromAbsDir
+  absFileUrl = pure . mkUriLocEmpty . fromAbsFile
+  locUrl     = pure . mkUriLocEmpty
 
 
 -- ** Grounded Urls
@@ -271,33 +283,25 @@ instance MMonad GroundedUrlT where
   embed f x = f (runGroundedUrlT x)
 
 instance ( Applicative m
-         ) => MonadUrl Abs File (GroundedUrlT m) where
-  pathUrl x   = pure (mkUriPathEmpty x)
-  locUrl x    = pure (mkUriLocEmpty x)
-
-instance ( Applicative m
-         ) => MonadUrl Abs Dir (GroundedUrlT m) where
-  pathUrl x   = pure (mkUriPathEmpty x)
-  locUrl x    = pure (mkUriLocEmpty x)
+         ) => MonadUrl (GroundedUrlT m) where
+  absDirUrl  = pure . mkUriLocEmpty . fromAbsDir
+  absFileUrl = pure . mkUriLocEmpty . fromAbsFile
+  locUrl     = pure . mkUriLocEmpty
 
 
 -- ** Absolute Urls
 
 newtype AbsoluteUrlT m a = AbsoluteUrlT
-  { runAbsoluteUrlT :: (Location Abs File -> URI) -> m a
+  { runAbsoluteUrlT :: (Location -> URI) -> m a
   } deriving Functor
 
 type AbsoluteUrl = AbsoluteUrlT Identity
 
 instance ( Applicative m
-         ) => MonadUrl Abs File (AbsoluteUrlT m) where
-  pathUrl x   = AbsoluteUrlT (\f -> pure (f (fromPath x)))
-  locUrl x    = AbsoluteUrlT (\f -> pure (f x))
-
--- instance ( Applicative m
---          ) => MonadUrl Abs Dir (AbsoluteUrlT m) where
---   pathUrl x   = AbsoluteUrlT (\f -> pure $ f x)
---   locUrl x    = AbsoluteUrlT (\f -> pure $ f x)
+         ) => MonadUrl (AbsoluteUrlT m) where
+  locUrl     x = AbsoluteUrlT (\f -> pure (f x))
+  absDirUrl  x = AbsoluteUrlT (\f -> pure (f (fromAbsDir x)))
+  absFileUrl x = AbsoluteUrlT (\f -> pure (f (fromAbsFile x)))
 
 instance Applicative m => Applicative (AbsoluteUrlT m) where
   pure x = AbsoluteUrlT $ const (pure x)
@@ -413,10 +417,7 @@ instance MMonad AbsoluteUrlT where
     runAbsoluteUrlT (f (runAbsoluteUrlT x r)) r
 
 
-mkUriPathEmpty :: Path base type' -> URI
-mkUriPathEmpty path = URI Strict.Nothing False (URIAuth Strict.Nothing Localhost Strict.Nothing) (getPathChunks path) V.empty Strict.Nothing
-
-mkUriLocEmpty :: Location base type' -> URI
+mkUriLocEmpty :: Location -> URI
 mkUriLocEmpty = packLocation Strict.Nothing False (URIAuth Strict.Nothing Localhost Strict.Nothing)
 
 
@@ -425,41 +426,35 @@ getPathChunks path = V.fromList $ fmap T.pack $ splitOn "/" $ dropWhile (== '/')
 
 
 
-packLocation :: Strict.Maybe T.Text -> Bool -> URIAuth -> Location base type' -> URI
+packLocation :: Strict.Maybe T.Text -> Bool -> URIAuth -> Location -> URI
 packLocation scheme slashes auth loc =
   URI scheme slashes auth
-    ( let unsnoc :: V.Vector a -> Maybe (V.Vector a, a)
-          unsnoc vs
-            | V.null vs = Nothing
-            | otherwise =
-                Just ( V.take (V.length vs - 1) vs
-                     , V.last vs
-                     )
-          fileExt :: T.Text
-          fileExt = maybe "" (("." <>) . T.pack) (locFileExt loc)
-      in  case unsnoc $ getPathChunks $ locPath loc of
-            Nothing -> [fileExt]
-            Just (xs,x) -> xs <> [x <> fileExt]
+    ( either getPathChunks getPathChunks (locPath loc)
     )
     ( V.fromList
         $ map (\(l,r) ->
-            (T.pack l) Strict.:!:
-              (maybe Strict.Nothing (Strict.Just . T.pack) r))
+            T.pack l Strict.:!: maybe Strict.Nothing (Strict.Just . T.pack) r)
         $ getQuery loc
     )
     (maybe Strict.Nothing (Strict.Just . T.pack) (getFragment loc))
 
 
-unpackLocation :: URI -> (Strict.Maybe T.Text, Bool, URIAuth, Location Abs File)
+unpackLocation :: URI -> (Strict.Maybe T.Text, Bool, URIAuth, Location)
 unpackLocation (URI scheme slashes auth xs qs mFrag) =
   ( scheme
   , slashes
   , auth
-  , let path = foldl (\acc x -> unsafeCoerce acc </> unsafePerformIO (parseRelFile $ T.unpack x))
+  , let path :: Either (Path Abs Dir) (Path Abs File)
+        path = case xs of
+          [] -> Left [absdir|/|]
+          _  ->
+            Right $
+               foldl (\acc x -> unsafeCoerce acc </> unsafePerformIO (parseRelFile $ T.unpack x))
                      (unsafePerformIO $ unsafeCoerce <$> parseAbsDir "/")
                      xs
+        withQs :: Location
         withQs = foldl (\acc (k Strict.:!: mV) -> acc <&> (T.unpack k, Strict.maybe Nothing (Just . T.unpack) mV))
-                       (fromPath path)
+                       (either fromAbsDir fromAbsFile path)
                        qs
     in  setFragment (Strict.maybe Nothing (Just . T.unpack) mFrag) withQs
   )

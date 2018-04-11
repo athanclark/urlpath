@@ -2,10 +2,10 @@
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 6df38fbf3cada74c1c5369e9fd600a67986f98a748076ddc5763e499cd98e236
+-- hash: 370200b23cf5fa3450682a014bbd744ebcf8345c2d887cdb320a3017c78431be
 
 name:           urlpath
-version:        8.2.0
+version:        9.0.0
 synopsis:       Painfully simple URL deployment.
 description:    Please see the README on Github at <https://github.com/githubuser/urlpath#readme>
 category:       Web, Data
@@ -44,7 +44,7 @@ library
     , monad-logger
     , mtl
     , path
-    , path-extra >=0.1.2
+    , path-extra >=0.2.0
     , resourcet
     , split
     , strict
