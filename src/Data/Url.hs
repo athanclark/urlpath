@@ -34,8 +34,8 @@ module Data.Url where
 
 import Path.Extended
 
-import Data.Functor.Identity
-import Data.Functor.Compose
+import Data.Functor.Identity (Identity (..))
+import Data.Functor.Compose (Compose)
 import Data.Maybe (maybe)
 import Data.URI (URI (..))
 import Data.URI.Auth (URIAuth (..))
@@ -45,24 +45,31 @@ import qualified Data.Strict.Tuple as Strict
 import qualified Data.Vector as V
 import Data.List.Split (splitOn)
 import qualified Data.Text as T
-import Control.Applicative
-import Control.Monad.Base
-import Control.Monad.Catch
-import Control.Monad.Cont
+import Data.Monoid ((<>))
+import Control.Applicative (Alternative ((<|>), empty))
+import Control.Monad (MonadPlus ())
+import Control.Monad.Fix (MonadFix ())
+import Control.Monad.Base (MonadBase (liftBase), liftBaseDefault)
+import Control.Monad.Catch (MonadMask (uninterruptibleMask, mask), MonadCatch (catch), MonadThrow (throwM))
+import Control.Monad.Cont (MonadCont (callCC), ContT)
 import Control.Monad.Trans.Error (Error, ErrorT)
-import Control.Monad.Except
-import Control.Monad.Trans.Control
+import Control.Monad.Except (MonadError (catchError, throwError), ExceptT)
+import Control.Monad.Trans (MonadTrans (lift))
+import Control.Monad.Trans.Control (MonadBaseControl (liftBaseWith, restoreM, StM), MonadTransControl (liftWith, restoreT, StT), ComposeSt, defaultRestoreM, defaultLiftBaseWith)
 import qualified Control.Monad.Trans.Control.Aligned as Aligned
-import Control.Monad.Trans.Identity
-import Control.Monad.Trans.Maybe
-import Control.Monad.List
-import Control.Monad.Reader
-import Control.Monad.Writer
-import Control.Monad.State
-import Control.Monad.RWS
-import Control.Monad.Logger
-import Control.Monad.Trans.Resource
-import Control.Monad.Morph
+import Control.Monad.Trans.Identity (IdentityT)
+import Control.Monad.Trans.Maybe (MaybeT)
+import Control.Monad.List (ListT)
+import Control.Monad.IO.Class (MonadIO (liftIO))
+import Control.Monad.Reader (MonadReader (ask, local), ReaderT)
+import Control.Monad.Writer (MonadWriter (pass, listen, tell), WriterT)
+import Control.Monad.State (MonadState (put, get), StateT)
+import Control.Monad.RWS (MonadRWS, RWST)
+import Control.Monad.Logger (MonadLogger (monadLoggerLog), NoLoggingT, LoggingT)
+import Control.Monad.Trans.Resource (MonadResource (liftResourceT), ResourceT)
+import Control.Monad.Morph (MMonad (embed), MFunctor (hoist))
+import System.IO.Unsafe (unsafePerformIO)
+import Unsafe.Coerce (unsafeCoerce)
 
 
 
@@ -440,3 +447,18 @@ packLocation scheme slashes auth loc =
         $ getQuery loc
     )
     (maybe Strict.Nothing (Strict.Just . T.pack) (getFragment loc))
+
+
+unpackLocation :: URI -> (Strict.Maybe T.Text, Bool, URIAuth, Location Abs File)
+unpackLocation (URI scheme slashes auth xs qs mFrag) =
+  ( scheme
+  , slashes
+  , auth
+  , let path = foldl (\acc x -> unsafeCoerce acc </> unsafePerformIO (parseRelFile $ T.unpack x))
+                     (unsafePerformIO $ unsafeCoerce <$> parseAbsDir "/")
+                     xs
+        withQs = foldl (\acc (k Strict.:!: mV) -> acc <&> (T.unpack k, Strict.maybe Nothing (Just . T.unpack) mV))
+                       (fromPath path)
+                       qs
+    in  setFragment (Strict.maybe Nothing (Just . T.unpack) mFrag) withQs
+  )

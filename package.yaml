@@ -1,0 +1,38 @@
+name:                urlpath
+version:             8.1.0
+github:              "athanclark/urlpath"
+license:             BSD3
+author:              "Athan Clark"
+maintainer:          "athan.clark@localcooking.com"
+copyright:           "Copyright (c) 2018 Athan Clark"
+
+extra-source-files:
+- README.md
+
+synopsis:            Painfully simple URL deployment.
+category:            Web, Data
+description:         Please see the README on Github at <https://github.com/githubuser/urlpath#readme>
+
+ghc-options:
+  - -Wall
+
+dependencies:
+- base >= 4.8 && < 5
+- attoparsec-uri >= 0.0.4
+- exceptions
+- mmorph
+- monad-control
+- monad-control-aligned
+- monad-logger
+- mtl
+- path-extra >= 0.0.6
+- resourcet
+- split
+- strict
+- text
+- transformers
+- transformers-base
+- vector
+
+library:
+  source-dirs: src

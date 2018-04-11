@@ -16,7 +16,7 @@
 # resolver:
 #  name: custom-snapshot
 #  location: "./custom-snapshot.yaml"
-resolver: lts-9.11
+resolver: lts-11.2
 
 # User packages to be built.
 # Various formats can be used as shown in the example below.
@@ -44,13 +44,13 @@ packages:
 
 # Dependency packages to be pulled from upstream that are not in the resolver
 # (e.g., acme-missiles-0.3)
-extra-deps:
-  - attoparsec-uri-0.0.4
-  - attoparsec-ip-0.0.1
-  - ip-1.1.2
-  - n-tuple-0.0.1.1
-  - path-extra-0.0.6
-  - monad-control-aligned-0.0.1
+# extra-deps:
+  # - attoparsec-uri-0.0.4
+  # - attoparsec-ip-0.0.1
+  # - ip-1.1.2
+  # - n-tuple-0.0.1.1
+  # - path-extra-0.0.6
+  # - monad-control-aligned-0.0.1
 
 # Override default flag values for local packages and extra-deps
 # flags: {}
