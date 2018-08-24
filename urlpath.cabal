@@ -2,7 +2,7 @@
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 370200b23cf5fa3450682a014bbd744ebcf8345c2d887cdb320a3017c78431be
+-- hash: 96cae7f0c4661885417643886fa5d08333c46319f16d33a360b3429b134f2bd6
 
 name:           urlpath
 version:        9.0.0
@@ -35,7 +35,7 @@ library
       src
   ghc-options: -Wall
   build-depends:
-      attoparsec-uri >=0.0.4
+      attoparsec-uri >=0.0.5.1
     , base >=4.8 && <5
     , exceptions
     , mmorph

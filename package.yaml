@@ -18,7 +18,7 @@ ghc-options:
 
 dependencies:
 - base >= 4.8 && < 5
-- attoparsec-uri >= 0.0.4
+- attoparsec-uri >= 0.0.5.1
 - exceptions
 - mmorph
 - monad-control

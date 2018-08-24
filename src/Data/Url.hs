@@ -429,9 +429,9 @@ getPathChunks path = V.fromList $ fmap T.pack $ splitOn "/" $ dropWhile (== '/')
 packLocation :: Strict.Maybe T.Text -> Bool -> URIAuth -> Location -> URI
 packLocation scheme slashes auth loc =
   URI scheme slashes auth
-    ( either getPathChunks getPathChunks (locPath loc)
+    (Strict.Just $ either getPathChunks getPathChunks (locPath loc)
     )
-    ( V.fromList
+    (V.fromList
         $ map (\(l,r) ->
             T.pack l Strict.:!: maybe Strict.Nothing (Strict.Just . T.pack) r)
         $ getQuery loc
@@ -446,12 +446,13 @@ unpackLocation (URI scheme slashes auth xs qs mFrag) =
   , auth
   , let path :: Either (Path Abs Dir) (Path Abs File)
         path = case xs of
-          [] -> Left [absdir|/|]
-          _  ->
-            Right $
-               foldl (\acc x -> unsafeCoerce acc </> unsafePerformIO (parseRelFile $ T.unpack x))
-                     (unsafePerformIO $ unsafeCoerce <$> parseAbsDir "/")
-                     xs
+          Strict.Nothing -> Left [absdir|/|]
+          Strict.Just xs'
+            | xs' == [] -> Left [absdir|/|]
+            | otherwise -> Right $
+              foldl (\acc x -> unsafeCoerce acc </> unsafePerformIO (parseRelFile $ T.unpack x))
+                    (unsafePerformIO $ unsafeCoerce <$> parseAbsDir "/")
+                    xs'
         withQs :: Location
         withQs = foldl (\acc (k Strict.:!: mV) -> acc <&> (T.unpack k, Strict.maybe Nothing (Just . T.unpack) mV))
                        (either fromAbsDir fromAbsFile path)
