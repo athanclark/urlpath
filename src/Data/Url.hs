@@ -51,7 +51,7 @@ import Control.Applicative (Alternative ((<|>), empty))
 import Control.Monad (MonadPlus ())
 import Control.Monad.Fix (MonadFix ())
 import Control.Monad.Base (MonadBase (liftBase), liftBaseDefault)
-import Control.Monad.Catch (MonadMask (uninterruptibleMask, mask), MonadCatch (catch), MonadThrow (throwM))
+import Control.Monad.Catch (MonadMask (uninterruptibleMask, mask, generalBracket), MonadCatch (catch), MonadThrow (throwM), ExitCase (ExitCaseSuccess))
 import Control.Monad.Cont (MonadCont (callCC), ContT)
 import Control.Monad.Trans.Error (Error, ErrorT)
 import Control.Monad.Except (MonadError (catchError, throwError), ExceptT)
@@ -399,6 +399,11 @@ instance ( MonadMask m
   uninterruptibleMask a = AbsoluteUrlT $ \r ->
     uninterruptibleMask $ \u -> runAbsoluteUrlT (a $ q u) r
     where q u (AbsoluteUrlT x) = AbsoluteUrlT (u . x)
+  generalBracket acq rel f = do
+    a <- acq
+    b <- f a
+    c <- rel a (ExitCaseSuccess b)
+    pure (b, c)
 
 instance ( MonadLogger m
          ) => MonadLogger (AbsoluteUrlT m) where

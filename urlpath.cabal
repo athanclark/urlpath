@@ -2,10 +2,10 @@
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: fb47f14654a7cf599ede8cd4bbcea362a4559a94d55550521dd32c2ca08ce795
+-- hash: 6cefde9c8088edade18012c83ffd8595977d63e1efdedd57b09a1cebf14ca5bf
 
 name:           urlpath
-version:        9.0.0.1
+version:        9.0.1
 synopsis:       Painfully simple URL deployment.
 description:    Please see the README on Github at <https://github.com/githubuser/urlpath#readme>
 category:       Web, Data
@@ -35,8 +35,8 @@ library
       src
   ghc-options: -Wall
   build-depends:
-      attoparsec-uri ==0.0.5.1
-    , base >=4.8 && <5
+      attoparsec-uri >=0.0.6
+    , base >=4.11 && <5
     , exceptions
     , mmorph
     , monad-control
