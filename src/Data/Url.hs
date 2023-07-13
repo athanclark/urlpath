@@ -6,6 +6,7 @@
   , OverloadedLists
   , QuasiQuotes
   , FlexibleInstances
+  , FlexibleContexts
   , StandaloneDeriving
   , TypeSynonymInstances
   , UndecidableInstances
