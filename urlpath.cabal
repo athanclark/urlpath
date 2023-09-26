@@ -1,8 +1,10 @@
--- This file has been generated from package.yaml by hpack version 0.21.2.
+cabal-version: 1.12
+
+-- This file has been generated from package.yaml by hpack version 0.35.2.
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 6cefde9c8088edade18012c83ffd8595977d63e1efdedd57b09a1cebf14ca5bf
+-- hash: e4e7b514042612012302953cd55f22a4f11db82da8773d10bc1f8dddc2d9b07c
 
 name:           urlpath
 version:        9.0.1
@@ -17,8 +19,6 @@ copyright:      Copyright (c) 2018 Athan Clark
 license:        BSD3
 license-file:   LICENSE
 build-type:     Simple
-cabal-version:  >= 1.10
-
 extra-source-files:
     README.md
 

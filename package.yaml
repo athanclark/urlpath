@@ -3,22 +3,22 @@ version:             9.0.1
 github:              "athanclark/urlpath"
 license:             BSD3
 author:              "Athan Clark"
-maintainer:          "athan.clark@localcooking.com"
-copyright:           "Copyright (c) 2018 Athan Clark"
+maintainer:          "athan.clark@gmail.com"
+copyright:           "Copyright (c) 2023 Athan Clark"
 
 extra-source-files:
 - README.md
 
 synopsis:            Painfully simple URL deployment.
 category:            Web, Data
-description:         Please see the README on Github at <https://github.com/githubuser/urlpath#readme>
+description:         Please see the README on Github at <https://github.com/athanclark/urlpath#readme>
 
 ghc-options:
   - -Wall
 
 dependencies:
 - base >= 4.11 && < 5
-- attoparsec-uri >= 0.0.6
+- attoparsec-uri >= 0.0.8
 - exceptions
 - mmorph
 - monad-control
