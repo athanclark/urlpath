@@ -5,12 +5,19 @@
 
 packages:
 - completed:
-    hackage: attoparsec-uri-0.0.6@sha256:dc8e044ba86e9c2d9fd4d795b430103c794a217e89118170911e6990258208b1,1805
+    hackage: attoparsec-uri-0.0.8.1@sha256:3bb4fed8f1d21c97be91a5183030566695cd704bf3c30e31472ce975c8073f11,1743
     pantry-tree:
-      sha256: 50fcc6cc89daf4438ce5240c92e8ddf1ef6879f686c46e74c8a8d68c98e092aa
-      size: 440
+      sha256: 7bf0c15c2746bbe1950ad7fae8b8b8b3ebf8ad396bff9fdea83cb334e93fa2b6
+      size: 442
   original:
-    hackage: attoparsec-uri-0.0.6
+    hackage: attoparsec-uri-0.0.8.1
+- completed:
+    hackage: monad-control-aligned-0.0.2@sha256:463cb1b6225fb0add887fd16d42be3e7857ab46b8d6e50d4e018335127759d4c,2409
+    pantry-tree:
+      sha256: 385d60a80eca8aec5442f6a440436ff5633641b1be20c61543df7d9d7acb95fb
+      size: 308
+  original:
+    hackage: monad-control-aligned-0.0.2
 snapshots:
 - completed:
     sha256: 9313df78f49519315342f4c51ffc5da12659d3735f8ac3c54a1fb98ff874474e

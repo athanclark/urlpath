@@ -1,18 +1,16 @@
-{-# LANGUAGE
-    TypeFamilies
-  , DeriveFunctor
-  , KindSignatures
-  , OverloadedStrings
-  , OverloadedLists
-  , QuasiQuotes
-  , FlexibleInstances
-  , FlexibleContexts
-  , StandaloneDeriving
-  , TypeSynonymInstances
-  , UndecidableInstances
-  , MultiParamTypeClasses
-  , GeneralizedNewtypeDeriving
-  #-}
+{-# LANGUAGE DeriveFunctor              #-}
+{-# LANGUAGE FlexibleContexts           #-}
+{-# LANGUAGE FlexibleInstances          #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE KindSignatures             #-}
+{-# LANGUAGE MultiParamTypeClasses      #-}
+{-# LANGUAGE OverloadedLists            #-}
+{-# LANGUAGE OverloadedStrings          #-}
+{-# LANGUAGE QuasiQuotes                #-}
+{-# LANGUAGE StandaloneDeriving         #-}
+{-# LANGUAGE TypeFamilies               #-}
+{-# LANGUAGE TypeSynonymInstances       #-}
+{-# LANGUAGE UndecidableInstances       #-}
 
 -- |
 -- Module      :  Data.Url
@@ -34,44 +32,66 @@
 
 module Data.Url where
 
-import Path (Path, Abs, File, Dir, parseAbsDir, parseRelFile, toFilePath, absdir, (</>))
-import Path.Extended (Location (..), fromAbsDir, fromAbsFile, (<&>), setFragment, getFragment, getQuery)
+import           Path                                (Abs, Dir, File, Path,
+                                                      absdir, parseAbsDir,
+                                                      parseRelFile, toFilePath,
+                                                      (</>))
+import           Path.Extended                       (Location (..), fromAbsDir,
+                                                      fromAbsFile, getFragment,
+                                                      getQuery, setFragment,
+                                                      (<&>))
 
-import Data.Functor.Identity (Identity (..))
-import Data.Functor.Compose (Compose)
-import Data.Maybe (maybe)
-import Data.URI (URI (..))
-import Data.URI.Auth (URIAuth (..))
-import Data.URI.Auth.Host (URIAuthHost (Localhost))
-import qualified Data.Strict.Maybe as Strict
-import qualified Data.Strict.Tuple as Strict
-import qualified Data.Vector as V
-import Data.List.Split (splitOn)
-import qualified Data.Text as T
-import Control.Applicative (Alternative ((<|>), empty))
-import Control.Monad (MonadPlus ())
-import Control.Monad.Fix (MonadFix ())
-import Control.Monad.Base (MonadBase (liftBase), liftBaseDefault)
-import Control.Monad.Catch (MonadMask (uninterruptibleMask, mask, generalBracket), MonadCatch (catch), MonadThrow (throwM), ExitCase (ExitCaseSuccess))
-import Control.Monad.Cont (MonadCont (callCC), ContT)
-import Control.Monad.Trans.Error (Error, ErrorT)
-import Control.Monad.Except (MonadError (catchError, throwError), ExceptT)
-import Control.Monad.Trans (MonadTrans (lift))
-import Control.Monad.Trans.Control (MonadBaseControl (liftBaseWith, restoreM, StM), MonadTransControl (liftWith, restoreT, StT), ComposeSt, defaultRestoreM, defaultLiftBaseWith)
+import           Control.Applicative                 (Alternative (empty, (<|>)))
+import           Control.Monad                       (MonadPlus)
+import           Control.Monad.Base                  (MonadBase (liftBase),
+                                                      liftBaseDefault)
+import           Control.Monad.Catch                 (ExitCase (ExitCaseSuccess),
+                                                      MonadCatch (catch),
+                                                      MonadMask (generalBracket, mask, uninterruptibleMask),
+                                                      MonadThrow (throwM))
+import           Control.Monad.Cont                  (ContT, MonadCont (callCC))
+import           Control.Monad.Except                (ExceptT,
+                                                      MonadError (catchError, throwError))
+import           Control.Monad.Fix                   (MonadFix)
+import           Control.Monad.IO.Class              (MonadIO (liftIO))
+import           Control.Monad.List                  (ListT)
+import           Control.Monad.Logger                (LoggingT,
+                                                      MonadLogger (monadLoggerLog),
+                                                      NoLoggingT)
+import           Control.Monad.Morph                 (MFunctor (hoist),
+                                                      MMonad (embed))
+import           Control.Monad.Reader                (MonadReader (ask, local),
+                                                      ReaderT)
+import           Control.Monad.RWS                   (MonadRWS, RWST)
+import           Control.Monad.State                 (MonadState (get, put),
+                                                      StateT)
+import           Control.Monad.Trans                 (MonadTrans (lift))
+import           Control.Monad.Trans.Control         (ComposeSt,
+                                                      MonadBaseControl (StM, liftBaseWith, restoreM),
+                                                      MonadTransControl (StT, liftWith, restoreT),
+                                                      defaultLiftBaseWith,
+                                                      defaultRestoreM)
 import qualified Control.Monad.Trans.Control.Aligned as Aligned
-import Control.Monad.Trans.Identity (IdentityT)
-import Control.Monad.Trans.Maybe (MaybeT)
-import Control.Monad.List (ListT)
-import Control.Monad.IO.Class (MonadIO (liftIO))
-import Control.Monad.Reader (MonadReader (ask, local), ReaderT)
-import Control.Monad.Writer (MonadWriter (pass, listen, tell), WriterT)
-import Control.Monad.State (MonadState (put, get), StateT)
-import Control.Monad.RWS (MonadRWS, RWST)
-import Control.Monad.Logger (MonadLogger (monadLoggerLog), NoLoggingT, LoggingT)
-import Control.Monad.Trans.Resource (MonadResource (liftResourceT), ResourceT)
-import Control.Monad.Morph (MMonad (embed), MFunctor (hoist))
-import System.IO.Unsafe (unsafePerformIO)
-import Unsafe.Coerce (unsafeCoerce)
+import           Control.Monad.Trans.Error           (Error, ErrorT)
+import           Control.Monad.Trans.Identity        (IdentityT)
+import           Control.Monad.Trans.Maybe           (MaybeT)
+import           Control.Monad.Trans.Resource        (MonadResource (liftResourceT),
+                                                      ResourceT)
+import           Control.Monad.Writer                (MonadWriter (listen, pass, tell),
+                                                      WriterT)
+import           Data.Functor.Compose                (Compose)
+import           Data.Functor.Identity               (Identity (..))
+import           Data.List.Split                     (splitOn)
+import           Data.Maybe                          (maybe)
+import qualified Data.Strict.Maybe                   as Strict
+import qualified Data.Strict.Tuple                   as Strict
+import qualified Data.Text                           as T
+import           Data.URI                            (URI (..))
+import           Data.URI.Auth                       (URIAuth (..))
+import           Data.URI.Auth.Host                  (URIAuthHost (Localhost))
+import qualified Data.Vector                         as V
+import           System.IO.Unsafe                    (unsafePerformIO)
+import           Unsafe.Coerce                       (unsafeCoerce)
 
 
 

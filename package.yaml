@@ -22,10 +22,10 @@ dependencies:
 - exceptions
 - mmorph
 - monad-control
-- monad-control-aligned
+- monad-control-aligned >= 0.0.2
 - monad-logger
 - mtl
-- path
+- path >= 0.9
 - path-extra >= 0.2.0
 - resourcet
 - split

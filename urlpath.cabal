@@ -4,18 +4,18 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: e4e7b514042612012302953cd55f22a4f11db82da8773d10bc1f8dddc2d9b07c
+-- hash: acde8c8ec55684686db298d7d6d3f7fa221d5f33ebc60852008e70f5a2d5917f
 
 name:           urlpath
 version:        9.0.1
 synopsis:       Painfully simple URL deployment.
-description:    Please see the README on Github at <https://github.com/githubuser/urlpath#readme>
+description:    Please see the README on Github at <https://github.com/athanclark/urlpath#readme>
 category:       Web, Data
 homepage:       https://github.com/athanclark/urlpath#readme
 bug-reports:    https://github.com/athanclark/urlpath/issues
 author:         Athan Clark
-maintainer:     athan.clark@localcooking.com
-copyright:      Copyright (c) 2018 Athan Clark
+maintainer:     athan.clark@gmail.com
+copyright:      Copyright (c) 2023 Athan Clark
 license:        BSD3
 license-file:   LICENSE
 build-type:     Simple
@@ -35,15 +35,15 @@ library
       src
   ghc-options: -Wall
   build-depends:
-      attoparsec-uri >=0.0.6
+      attoparsec-uri >=0.0.8
     , base >=4.11 && <5
     , exceptions
     , mmorph
     , monad-control
-    , monad-control-aligned
+    , monad-control-aligned >=0.0.2
     , monad-logger
     , mtl
-    , path
+    , path >=0.9
     , path-extra >=0.2.0
     , resourcet
     , split
