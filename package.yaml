@@ -1,5 +1,5 @@
 name:                urlpath
-version:             9.0.1
+version:             10.0.0
 github:              "athanclark/urlpath"
 license:             BSD3
 author:              "Athan Clark"
@@ -18,7 +18,7 @@ ghc-options:
 
 dependencies:
 - base >= 4.11 && < 5
-- attoparsec-uri >= 0.0.8
+- attoparsec-uri >= 0.0.9
 - exceptions
 - mmorph
 - monad-control
@@ -26,7 +26,7 @@ dependencies:
 - monad-logger
 - mtl
 - path >= 0.9
-- path-extra >= 0.2.0
+- path-extra >= 0.3.0
 - resourcet
 - split
 - strict

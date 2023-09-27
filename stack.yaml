@@ -45,8 +45,8 @@ packages:
 # Dependency packages to be pulled from upstream that are not in the resolver
 # (e.g., acme-missiles-0.3)
 extra-deps:
-# - path-extra-0.2.0
-- attoparsec-uri-0.0.8.1
+- path-extra-0.3.0
+- attoparsec-uri-0.0.9
 - monad-control-aligned-0.0.2
 # - ip-1.4.1
 

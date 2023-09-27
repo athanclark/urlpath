@@ -1,12 +1,14 @@
 {-# LANGUAGE DeriveFunctor              #-}
 {-# LANGUAGE FlexibleContexts           #-}
 {-# LANGUAGE FlexibleInstances          #-}
+{-# LANGUAGE FunctionalDependencies     #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE KindSignatures             #-}
 {-# LANGUAGE MultiParamTypeClasses      #-}
 {-# LANGUAGE OverloadedLists            #-}
 {-# LANGUAGE OverloadedStrings          #-}
 {-# LANGUAGE QuasiQuotes                #-}
+{-# LANGUAGE RecordWildCards            #-}
 {-# LANGUAGE StandaloneDeriving         #-}
 {-# LANGUAGE TypeFamilies               #-}
 {-# LANGUAGE TypeSynonymInstances       #-}
@@ -32,14 +34,15 @@
 
 module Data.Url where
 
-import           Path                                (Abs, Dir, File, Path,
-                                                      absdir, parseAbsDir,
+import           Path                                (Abs, Path, Rel, absdir,
+                                                      parseAbsDir, parseRelDir,
                                                       parseRelFile, toFilePath,
                                                       (</>))
-import           Path.Extended                       (Location (..), fromAbsDir,
-                                                      fromAbsFile, getFragment,
-                                                      getQuery, setFragment,
-                                                      (<&>))
+import           Path.Extended                       (Location (..),
+                                                      LocationPath,
+                                                      printLocation,
+                                                      setFragment, (<&>))
+import qualified Path.Extended                       as Path
 
 import           Control.Applicative                 (Alternative (empty, (<|>)))
 import           Control.Monad                       (MonadPlus)
@@ -82,11 +85,11 @@ import           Control.Monad.Writer                (MonadWriter (listen, pass,
 import           Data.Functor.Compose                (Compose)
 import           Data.Functor.Identity               (Identity (..))
 import           Data.List.Split                     (splitOn)
-import           Data.Maybe                          (maybe)
 import qualified Data.Strict.Maybe                   as Strict
 import qualified Data.Strict.Tuple                   as Strict
 import qualified Data.Text                           as T
-import           Data.URI                            (URI (..))
+import           Data.URI                            (URI (..), printURI)
+import qualified Data.URI                            as URI
 import           Data.URI.Auth                       (URIAuth (..))
 import           Data.URI.Auth.Host                  (URIAuthHost (Localhost))
 import qualified Data.Vector                         as V
@@ -97,122 +100,105 @@ import           Unsafe.Coerce                       (unsafeCoerce)
 
 -- * Classes
 
--- | Turns a @Path@ or @Location@ into a @String@, where the rendering behavior
+-- | Turns a 'Path' or 'Location' into a 'String', where the rendering behavior
 -- (relative, grounded and absolute) is encoded in the monad you use, much like
 -- @LoggingT@ and @NoLoggingT@ from <https://hackage.haskell.org/package/monad-logger monad-logger>.
-class MonadUrl (m :: * -> *) where
-  absDirUrl  :: Path Abs Dir
-             -> m URI
-  absFileUrl :: Path Abs File
-             -> m URI
-  locUrl     :: Location
-             -> m URI
+class MonadUrl (m :: * -> *) base | m -> base where
+  -- | Create a 'URL' from a 'Location' - either a directory or file, and can include query strings
+  -- & fragments.
+  locToUrl :: Location base -> m URL
 
-instance MonadUrl IO where
-  absDirUrl  = pure . mkUriLocEmpty . fromAbsDir
-  absFileUrl = pure . mkUriLocEmpty . fromAbsFile
-  locUrl     = pure . mkUriLocEmpty
+-- | Treated as relative urls
+instance MonadUrl IO Rel where
+  locToUrl = pure . RelURL
 
-instance ( MonadUrl m
+instance ( MonadUrl m base
          , Monad m
-         ) => MonadUrl (MaybeT m) where
-  absDirUrl  = lift . absDirUrl
-  absFileUrl = lift . absFileUrl
-  locUrl     = lift . locUrl
+         ) => MonadUrl (MaybeT m) base where
+  locToUrl     = lift . locToUrl
 
-instance ( MonadUrl m
+instance ( MonadUrl m base
          , Monad m
-         ) => MonadUrl (ListT m) where
-  absDirUrl  = lift . absDirUrl
-  absFileUrl = lift . absFileUrl
-  locUrl     = lift . locUrl
+         ) => MonadUrl (ListT m) base where
+  locToUrl     = lift . locToUrl
 
-instance ( MonadUrl m
+instance ( MonadUrl m base
          , Monad m
-         ) => MonadUrl (ResourceT m) where
-  absDirUrl  = lift . absDirUrl
-  absFileUrl = lift . absFileUrl
-  locUrl     = lift . locUrl
+         ) => MonadUrl (ResourceT m) base where
+  locToUrl     = lift . locToUrl
 
-instance ( MonadUrl m
+instance ( MonadUrl m base
          , Monad m
-         ) => MonadUrl (IdentityT m) where
-  absDirUrl  = lift . absDirUrl
-  absFileUrl = lift . absFileUrl
-  locUrl     = lift . locUrl
+         ) => MonadUrl (IdentityT m) base where
+  locToUrl     = lift . locToUrl
 
-instance ( MonadUrl m
+instance ( MonadUrl m base
          , Monad m
-         ) => MonadUrl (LoggingT m) where
-  absDirUrl  = lift . absDirUrl
-  absFileUrl = lift . absFileUrl
-  locUrl     = lift . locUrl
+         ) => MonadUrl (LoggingT m) base where
+  locToUrl     = lift . locToUrl
 
-instance ( MonadUrl m
+instance ( MonadUrl m base
          , Monad m
-         ) => MonadUrl (NoLoggingT m) where
-  absDirUrl  = lift . absDirUrl
-  absFileUrl = lift . absFileUrl
-  locUrl     = lift . locUrl
+         ) => MonadUrl (NoLoggingT m) base where
+  locToUrl     = lift . locToUrl
 
-instance ( MonadUrl m
+instance ( MonadUrl m base
          , Monad m
-         ) => MonadUrl (ReaderT r m) where
-  absDirUrl  = lift . absDirUrl
-  absFileUrl = lift . absFileUrl
-  locUrl     = lift . locUrl
+         ) => MonadUrl (ReaderT r m) base where
+  locToUrl     = lift . locToUrl
 
-instance ( MonadUrl m
+instance ( MonadUrl m base
          , Monad m
          , Monoid w
-         ) => MonadUrl (WriterT w m) where
-  absDirUrl  = lift . absDirUrl
-  absFileUrl = lift . absFileUrl
-  locUrl     = lift . locUrl
+         ) => MonadUrl (WriterT w m) base where
+  locToUrl     = lift . locToUrl
 
-instance ( MonadUrl m
+instance ( MonadUrl m base
          , Monad m
-         ) => MonadUrl (StateT s m) where
-  absDirUrl  = lift . absDirUrl
-  absFileUrl = lift . absFileUrl
-  locUrl     = lift . locUrl
+         ) => MonadUrl (StateT s m) base where
+  locToUrl     = lift . locToUrl
 
-instance ( MonadUrl m
+instance ( MonadUrl m base
          , Monad m
          , Error e
-         ) => MonadUrl (ErrorT e m) where
-  absDirUrl  = lift . absDirUrl
-  absFileUrl = lift . absFileUrl
-  locUrl     = lift . locUrl
+         ) => MonadUrl (ErrorT e m) base where
+  locToUrl     = lift . locToUrl
 
-instance ( MonadUrl m
+instance ( MonadUrl m base
          , Monad m
-         ) => MonadUrl (ContT r m) where
-  absDirUrl  = lift . absDirUrl
-  absFileUrl = lift . absFileUrl
-  locUrl     = lift . locUrl
+         ) => MonadUrl (ContT r m) base where
+  locToUrl     = lift . locToUrl
 
-instance ( MonadUrl m
+instance ( MonadUrl m base
          , Monad m
-         ) => MonadUrl (ExceptT e m) where
-  absDirUrl  = lift . absDirUrl
-  absFileUrl = lift . absFileUrl
-  locUrl     = lift . locUrl
+         ) => MonadUrl (ExceptT e m) base where
+  locToUrl     = lift . locToUrl
 
-instance ( MonadUrl m
+instance ( MonadUrl m base
          , Monad m
          , Monoid w
-         ) => MonadUrl (RWST r w s m) where
-  absDirUrl  = lift . absDirUrl
-  absFileUrl = lift . absFileUrl
-  locUrl     = lift . locUrl
+         ) => MonadUrl (RWST r w s m) base where
+  locToUrl     = lift . locToUrl
 
 
 -- * Types
 
+-- ** URL
+
+-- | Either a URI (which could include a hostname), or a relative url.
+data URL = AbsURL URI | RelURL (Location Rel)
+
+printURL :: URL -> T.Text
+printURL x = case x of
+  AbsURL y -> printURI y
+  RelURL y -> printLocation y
+
 
 -- ** Relative Urls
 
+-- | When printing a 'URL' generated by a 'Location' in this context,
+-- they will always omit the hostname information and print path references relatively
+-- (without @./@).
 newtype RelativeUrlT m a = RelativeUrlT
   { runRelativeUrlT :: m a
   } deriving ( Show, Eq, Ord, Functor, Applicative, Alternative, Monad, MonadFix
@@ -255,14 +241,14 @@ instance MMonad RelativeUrlT where
 
 
 instance ( Applicative m
-         ) => MonadUrl (RelativeUrlT m) where
-  absDirUrl  = pure . mkUriLocEmpty . fromAbsDir
-  absFileUrl = pure . mkUriLocEmpty . fromAbsFile
-  locUrl     = pure . mkUriLocEmpty
+         ) => MonadUrl (RelativeUrlT m) Rel where
+  locToUrl = pure . RelURL
 
 
 -- ** Grounded Urls
 
+-- | "Grounded" urls mean that, while omiting host information, paths start with
+-- a @/@, like @/foo@.
 newtype GroundedUrlT m a = GroundedUrlT
   { runGroundedUrlT :: m a
   } deriving ( Show, Eq, Ord, Functor, Applicative, Alternative, Monad, MonadFix
@@ -304,25 +290,23 @@ instance MMonad GroundedUrlT where
   embed f x = f (runGroundedUrlT x)
 
 instance ( Applicative m
-         ) => MonadUrl (GroundedUrlT m) where
-  absDirUrl  = pure . mkUriLocEmpty . fromAbsDir
-  absFileUrl = pure . mkUriLocEmpty . fromAbsFile
-  locUrl     = pure . mkUriLocEmpty
+         ) => MonadUrl (GroundedUrlT m) Abs where
+  locToUrl     = pure . AbsURL . mkUriLocEmpty
 
 
 -- ** Absolute Urls
 
+-- | Given a means to take an absolute location and turn it into an URI, make a monad used to
+-- construct urls. You can use 'packLocation' to create the @Location Abs -> URI@ function.
 newtype AbsoluteUrlT m a = AbsoluteUrlT
-  { runAbsoluteUrlT :: (Location -> URI) -> m a
+  { runAbsoluteUrlT :: (Location Abs -> URI) -> m a
   } deriving Functor
 
 type AbsoluteUrl = AbsoluteUrlT Identity
 
 instance ( Applicative m
-         ) => MonadUrl (AbsoluteUrlT m) where
-  locUrl     x = AbsoluteUrlT (\f -> pure (f x))
-  absDirUrl  x = AbsoluteUrlT (\f -> pure (f (fromAbsDir x)))
-  absFileUrl x = AbsoluteUrlT (\f -> pure (f (fromAbsFile x)))
+         ) => MonadUrl (AbsoluteUrlT m) Abs where
+  locToUrl x = AbsoluteUrlT (\f -> pure . AbsURL $ f x)
 
 instance Applicative m => Applicative (AbsoluteUrlT m) where
   pure x = AbsoluteUrlT $ const (pure x)
@@ -334,7 +318,6 @@ instance Alternative m => Alternative (AbsoluteUrlT m) where
   (AbsoluteUrlT f) <|> (AbsoluteUrlT g) = AbsoluteUrlT $ \h -> f h <|> g h
 
 instance Monad m => Monad (AbsoluteUrlT m) where
-  return x = AbsoluteUrlT $ const (return x)
   m >>= f = AbsoluteUrlT $ \r ->
     runAbsoluteUrlT m r >>= (\x -> runAbsoluteUrlT (f x) r)
 
@@ -443,45 +426,58 @@ instance MMonad AbsoluteUrlT where
     runAbsoluteUrlT (f (runAbsoluteUrlT x r)) r
 
 
-mkUriLocEmpty :: Location -> URI
-mkUriLocEmpty = packLocation Strict.Nothing False (URIAuth Strict.Nothing Localhost Strict.Nothing)
+mkUriLocEmpty :: Location Abs -> URI
+mkUriLocEmpty =
+  packLocation Strict.Nothing False (URIAuth Strict.Nothing Strict.Nothing Localhost Strict.Nothing)
 
 
 getPathChunks :: Path base type' -> V.Vector T.Text
-getPathChunks path = V.fromList $ fmap T.pack $ splitOn "/" $ dropWhile (== '/') (toFilePath path)
+getPathChunks = V.fromList . fmap T.pack . splitOn "/" . dropWhile (== '/') . toFilePath
 
 
 
-packLocation :: Strict.Maybe T.Text -> Bool -> URIAuth -> Location -> URI
-packLocation scheme slashes auth loc =
+packLocation :: Strict.Maybe T.Text -> Bool -> URIAuth -> Location Abs -> URI
+packLocation scheme slashes auth Location{..} =
   URI scheme slashes auth
-    (Strict.Just $ either getPathChunks getPathChunks (locPath loc)
+    (Strict.Just $ case locPath of
+        Path.Dir xs  -> (getPathChunks xs, URI.Dir)
+        Path.File xs -> (getPathChunks xs, URI.File)
     )
     (V.fromList
         $ map (\(l,r) ->
             T.pack l Strict.:!: maybe Strict.Nothing (Strict.Just . T.pack) r)
-        $ getQuery loc
+            locQueryParams
     )
-    (maybe Strict.Nothing (Strict.Just . T.pack) (getFragment loc))
+    (maybe Strict.Nothing (Strict.Just . T.pack) locFragment)
 
 
-unpackLocation :: URI -> (Strict.Maybe T.Text, Bool, URIAuth, Location)
+unpackLocation :: URI -> (Strict.Maybe T.Text, Bool, URIAuth, Location Abs)
 unpackLocation (URI scheme slashes auth xs qs mFrag) =
   ( scheme
   , slashes
   , auth
-  , let path :: Either (Path Abs Dir) (Path Abs File)
+  , let path :: LocationPath Abs
         path = case xs of
-          Strict.Nothing -> Left [absdir|/|]
-          Strict.Just xs'
-            | xs' == [] -> Left [absdir|/|]
-            | otherwise -> Right $
-              foldl (\acc x -> unsafeCoerce acc </> unsafePerformIO (parseRelFile $ T.unpack x))
-                    (unsafePerformIO $ unsafeCoerce <$> parseAbsDir "/")
-                    xs'
-        withQs :: Location
-        withQs = foldl (\acc (k Strict.:!: mV) -> acc <&> (T.unpack k, Strict.maybe Nothing (Just . T.unpack) mV))
-                       (either fromAbsDir fromAbsFile path)
-                       qs
+          Strict.Nothing -> Path.Dir [absdir|/|]
+          Strict.Just (xs', dirOrFile)
+            | xs' == [] -> Path.Dir [absdir|/|]
+            | otherwise ->
+              case dirOrFile of
+                URI.File -> Path.File $
+                  foldl (\acc x -> unsafeCoerce acc </> unsafePerformIO (parseRelFile $ T.unpack x))
+                        (unsafePerformIO $ unsafeCoerce <$> parseAbsDir "/")
+                        xs'
+                URI.Dir -> Path.Dir $
+                  foldl (\acc x -> unsafeCoerce acc </> unsafePerformIO (parseRelDir $ T.unpack x <> "/"))
+                        (unsafePerformIO $ unsafeCoerce <$> parseAbsDir "/")
+                        xs'
+        withQs :: Location Abs
+        withQs =
+          foldl
+            (\acc (k Strict.:!: mV) ->
+               acc <&> (T.unpack k, Strict.maybe Nothing (Just . T.unpack) mV)
+            )
+            (Location path [] Nothing)
+            qs
     in  setFragment (Strict.maybe Nothing (Just . T.unpack) mFrag) withQs
   )

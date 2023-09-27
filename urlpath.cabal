@@ -4,10 +4,10 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: acde8c8ec55684686db298d7d6d3f7fa221d5f33ebc60852008e70f5a2d5917f
+-- hash: 48c44feca6dd19038002a3f84713aa9db6c50044e70af8591d3de84255dc3e83
 
 name:           urlpath
-version:        9.0.1
+version:        10.0.0
 synopsis:       Painfully simple URL deployment.
 description:    Please see the README on Github at <https://github.com/athanclark/urlpath#readme>
 category:       Web, Data
@@ -35,7 +35,7 @@ library
       src
   ghc-options: -Wall
   build-depends:
-      attoparsec-uri >=0.0.8
+      attoparsec-uri >=0.0.9
     , base >=4.11 && <5
     , exceptions
     , mmorph
@@ -44,7 +44,7 @@ library
     , monad-logger
     , mtl
     , path >=0.9
-    , path-extra >=0.2.0
+    , path-extra >=0.3.0
     , resourcet
     , split
     , strict
