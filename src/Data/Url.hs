@@ -103,81 +103,81 @@ import           Unsafe.Coerce                       (unsafeCoerce)
 -- | Turns a 'Path' or 'Location' into a 'String', where the rendering behavior
 -- (relative, grounded and absolute) is encoded in the monad you use, much like
 -- @LoggingT@ and @NoLoggingT@ from <https://hackage.haskell.org/package/monad-logger monad-logger>.
-class MonadUrl (m :: * -> *) base | m -> base where
+class MonadUrl base (m :: * -> *) | m -> base where
   -- | Create a 'URL' from a 'Location' - either a directory or file, and can include query strings
   -- & fragments.
   locToUrl :: Location base -> m URL
 
 -- | Treated as relative urls
-instance MonadUrl IO Rel where
+instance MonadUrl Rel IO where
   locToUrl = pure . RelURL
 
-instance ( MonadUrl m base
+instance ( MonadUrl base m
          , Monad m
-         ) => MonadUrl (MaybeT m) base where
+         ) => MonadUrl base (MaybeT m) where
   locToUrl     = lift . locToUrl
 
-instance ( MonadUrl m base
+instance ( MonadUrl base m
          , Monad m
-         ) => MonadUrl (ListT m) base where
+         ) => MonadUrl base (ListT m) where
   locToUrl     = lift . locToUrl
 
-instance ( MonadUrl m base
+instance ( MonadUrl base m
          , Monad m
-         ) => MonadUrl (ResourceT m) base where
+         ) => MonadUrl base (ResourceT m) where
   locToUrl     = lift . locToUrl
 
-instance ( MonadUrl m base
+instance ( MonadUrl base m
          , Monad m
-         ) => MonadUrl (IdentityT m) base where
+         ) => MonadUrl base (IdentityT m) where
   locToUrl     = lift . locToUrl
 
-instance ( MonadUrl m base
+instance ( MonadUrl base m
          , Monad m
-         ) => MonadUrl (LoggingT m) base where
+         ) => MonadUrl base (LoggingT m) where
   locToUrl     = lift . locToUrl
 
-instance ( MonadUrl m base
+instance ( MonadUrl base m
          , Monad m
-         ) => MonadUrl (NoLoggingT m) base where
+         ) => MonadUrl base (NoLoggingT m) where
   locToUrl     = lift . locToUrl
 
-instance ( MonadUrl m base
+instance ( MonadUrl base m
          , Monad m
-         ) => MonadUrl (ReaderT r m) base where
+         ) => MonadUrl base (ReaderT r m) where
   locToUrl     = lift . locToUrl
 
-instance ( MonadUrl m base
+instance ( MonadUrl base m
          , Monad m
          , Monoid w
-         ) => MonadUrl (WriterT w m) base where
+         ) => MonadUrl base (WriterT w m) where
   locToUrl     = lift . locToUrl
 
-instance ( MonadUrl m base
+instance ( MonadUrl base m
          , Monad m
-         ) => MonadUrl (StateT s m) base where
+         ) => MonadUrl base (StateT s m) where
   locToUrl     = lift . locToUrl
 
-instance ( MonadUrl m base
+instance ( MonadUrl base m
          , Monad m
          , Error e
-         ) => MonadUrl (ErrorT e m) base where
+         ) => MonadUrl base (ErrorT e m) where
   locToUrl     = lift . locToUrl
 
-instance ( MonadUrl m base
+instance ( MonadUrl base m
          , Monad m
-         ) => MonadUrl (ContT r m) base where
+         ) => MonadUrl base (ContT r m) where
   locToUrl     = lift . locToUrl
 
-instance ( MonadUrl m base
+instance ( MonadUrl base m
          , Monad m
-         ) => MonadUrl (ExceptT e m) base where
+         ) => MonadUrl base (ExceptT e m) where
   locToUrl     = lift . locToUrl
 
-instance ( MonadUrl m base
+instance ( MonadUrl base m
          , Monad m
          , Monoid w
-         ) => MonadUrl (RWST r w s m) base where
+         ) => MonadUrl base (RWST r w s m) where
   locToUrl     = lift . locToUrl
 
 
@@ -241,7 +241,7 @@ instance MMonad RelativeUrlT where
 
 
 instance ( Applicative m
-         ) => MonadUrl (RelativeUrlT m) Rel where
+         ) => MonadUrl Rel (RelativeUrlT m) where
   locToUrl = pure . RelURL
 
 
@@ -290,7 +290,7 @@ instance MMonad GroundedUrlT where
   embed f x = f (runGroundedUrlT x)
 
 instance ( Applicative m
-         ) => MonadUrl (GroundedUrlT m) Abs where
+         ) => MonadUrl Abs (GroundedUrlT m) where
   locToUrl     = pure . AbsURL . mkUriLocEmpty
 
 
@@ -305,7 +305,7 @@ newtype AbsoluteUrlT m a = AbsoluteUrlT
 type AbsoluteUrl = AbsoluteUrlT Identity
 
 instance ( Applicative m
-         ) => MonadUrl (AbsoluteUrlT m) Abs where
+         ) => MonadUrl Abs (AbsoluteUrlT m) where
   locToUrl x = AbsoluteUrlT (\f -> pure . AbsURL $ f x)
 
 instance Applicative m => Applicative (AbsoluteUrlT m) where
