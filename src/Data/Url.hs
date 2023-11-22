@@ -79,7 +79,10 @@ import           Control.Monad.Trans.Control         (ComposeSt,
                                                       defaultLiftBaseWith,
                                                       defaultRestoreM)
 import qualified Control.Monad.Trans.Control.Aligned as Aligned
+#if MIN_VERSION_transformers(0,6,0,0)
+#else
 import           Control.Monad.Trans.Error           (Error, ErrorT)
+#endif
 import           Control.Monad.Trans.Identity        (IdentityT)
 import           Control.Monad.Trans.Maybe           (MaybeT)
 import           Control.Monad.Trans.Resource        (MonadResource (liftResourceT),
@@ -165,11 +168,14 @@ instance ( MonadUrl base m
          ) => MonadUrl base (StateT s m) where
   locToUrl     = lift . locToUrl
 
+#if MIN_VERSION_mtl(0,6,0,0)
+#else
 instance ( MonadUrl base m
          , Monad m
          , Error e
          ) => MonadUrl base (ErrorT e m) where
   locToUrl     = lift . locToUrl
+#endif
 
 instance ( MonadUrl base m
          , Monad m
