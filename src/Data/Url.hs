@@ -79,7 +79,7 @@ import           Control.Monad.Trans.Control         (ComposeSt,
                                                       defaultLiftBaseWith,
                                                       defaultRestoreM)
 import qualified Control.Monad.Trans.Control.Aligned as Aligned
-#if MIN_VERSION_transformers(0,6,0,0)
+#if MIN_VERSION_transformers(0,6,0)
 #else
 import           Control.Monad.Trans.Error           (Error, ErrorT)
 #endif
@@ -168,7 +168,7 @@ instance ( MonadUrl base m
          ) => MonadUrl base (StateT s m) where
   locToUrl     = lift . locToUrl
 
-#if MIN_VERSION_mtl(0,6,0,0)
+#if MIN_VERSION_mtl(0,6,0)
 #else
 instance ( MonadUrl base m
          , Monad m

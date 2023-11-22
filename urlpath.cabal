@@ -4,10 +4,10 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 158a46a0005492d4e96f061ea2a1020d6f3e2d9cef1f53450a4414c589be843a
+-- hash: bc836fa8a49a673fab5da2ef5a347bb9928f8406de2ab7213ba3bc9184d0e26a
 
 name:           urlpath
-version:        11.0.1
+version:        11.0.2
 synopsis:       Painfully simple URL deployment.
 description:    Please see the README on Github at <https://github.com/athanclark/urlpath#readme>
 category:       Web, Data
