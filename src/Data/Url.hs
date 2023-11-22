@@ -13,6 +13,7 @@
 {-# LANGUAGE TypeFamilies               #-}
 {-# LANGUAGE TypeSynonymInstances       #-}
 {-# LANGUAGE UndecidableInstances       #-}
+{-# LANGUAGE CPP #-}
 
 -- |
 -- Module      :  Data.Url
@@ -57,7 +58,10 @@ import           Control.Monad.Except                (ExceptT,
                                                       MonadError (catchError, throwError))
 import           Control.Monad.Fix                   (MonadFix)
 import           Control.Monad.IO.Class              (MonadIO (liftIO))
+#if MIN_VERSION_mtl(2,3,1)
+#else
 import           Control.Monad.List                  (ListT)
+#endif
 import           Control.Monad.Logger                (LoggingT,
                                                       MonadLogger (monadLoggerLog),
                                                       NoLoggingT)
@@ -117,10 +121,13 @@ instance ( MonadUrl base m
          ) => MonadUrl base (MaybeT m) where
   locToUrl     = lift . locToUrl
 
+#if MIN_VERSION_mtl(2,3,1)
+#else
 instance ( MonadUrl base m
          , Monad m
          ) => MonadUrl base (ListT m) where
   locToUrl     = lift . locToUrl
+#endif
 
 instance ( MonadUrl base m
          , Monad m

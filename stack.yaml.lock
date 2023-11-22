@@ -5,12 +5,12 @@
 
 packages:
 - completed:
-    hackage: path-extra-0.3.0@sha256:cafa9ff476edfe1ac005f7400de7c2640d5b07aaab89c3a2bbae42d12878f299,1545
+    hackage: path-extra-0.3.1@sha256:d426d96796847c73083bb1c87a63a5062bc0e3798b60871450e4d4ddbde17905,1545
     pantry-tree:
-      sha256: 2fac399427c19a8cea6d08ea570b63fc2a660a57289e1a2489b15580f555353b
+      sha256: 95d5c99d2f4a6bdb4611335e65e84de13d1b9b49ef2a33234c57d1be836cc4d7
       size: 317
   original:
-    hackage: path-extra-0.3.0
+    hackage: path-extra-0.3.1
 - completed:
     hackage: attoparsec-uri-0.0.9@sha256:fde52f7bbac8d94d443a795395b6c9574226c8d6c66eda892c9ae212d01fa1d9,1741
     pantry-tree:
@@ -27,7 +27,7 @@ packages:
     hackage: monad-control-aligned-0.0.2
 snapshots:
 - completed:
-    sha256: 9313df78f49519315342f4c51ffc5da12659d3735f8ac3c54a1fb98ff874474e
-    size: 640036
-    url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/lts/21/12.yaml
-  original: lts-21.12
+    sha256: afd5ba64ab602cabc2d3942d3d7e7dd6311bc626dcb415b901eaf576cb62f0ea
+    size: 640060
+    url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/lts/21/22.yaml
+  original: lts-21.22
